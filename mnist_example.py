@@ -18,11 +18,11 @@ class Linear:
         super(Linear, self).__init__()
 
         w = 1. / np.sqrt(input_size)
-        self.weight = np.random.uniform(-w, w, (input_size, output_size))
+        self.weight = np.random.uniform(-w, w, (output_size, input_size))
 
     def __call__(self, x):
 
-        return np.dot(x, self.weight)
+        return np.einsum('nm,Bm->Bn', self.weight, x)
 
 class model:
     def __init__(self):
@@ -53,7 +53,7 @@ class train(object):
     def __init__(self, X_train, y_train, eta=1e-3):
 
         self.model = model()
-        self.epochs = 10
+        self.epochs = 100
         self.n_layers = len(self.model.get_layers)
         self.eta = eta
         self.batch_size = 10
@@ -69,7 +69,7 @@ class train(object):
         :param e_l: error vector.
         :return: weight update
         """
-        return - self.eta * np.matmul(y_lm1.T, e_l)
+        return - self.eta * np.matmul(e_l.T, y_lm1)
 
     def trainepoch(self, epoch):
         """
@@ -90,14 +90,14 @@ class train(object):
             # -- compute error
             e = [y_target - y[-1]]
             for l in range(4, 1, -1):
-                e.insert(0, np.matmul(e[0], self.model.get_layers[l].weight.T))
+                e.insert(0, np.einsum('nm,Bm->Bn', self.model.get_layers[l].weight.T, e[0]))
 
             # -- weight update
-            for i in range(4):
-                self.model.get_layers[i+1].weight = self.model.get_layers[i+1].weight + self.del_W(y[i], e[i])
+            for l, key in enumerate(self.model.get_layers.keys()):
+                self.model.get_layers[key].weight = self.model.get_layers[key].weight + self.del_W(y[l], e[l])
 
             # -- compute loss
-            train_loss += 0.5 * np.dot(np.transpose(e[-1]), e[-1]).item()
+            train_loss += 0.5 * np.dot(e[-1].T, e[-1]).item()
 
         # -- log
         print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / n_train))
