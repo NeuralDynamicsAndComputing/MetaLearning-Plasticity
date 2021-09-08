@@ -88,14 +88,13 @@ class train(object):
             y = self.model(y0)
 
             # -- compute error
-            e = []
-            e.insert(0, y_target - y[-1])
+            e = [y_target - y[-1]]
             for l in range(4, 1, -1):
                 e.insert(0, np.matmul(e[0], self.model.get_layers[l].weight.T))
 
             # -- weight update
             for i in range(4):
-                self.model.get_layers[i+1].weight = self.model.get_layers[i+1].weight + self.del_W(y[i].T, e[i])
+                self.model.get_layers[i+1].weight = self.model.get_layers[i+1].weight + self.del_W(y[i], e[i])
 
             # -- compute loss
             train_loss += 0.5 * np.dot(np.transpose(e[-1]), e[-1]).item()
