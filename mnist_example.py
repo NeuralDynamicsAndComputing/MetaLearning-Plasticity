@@ -63,6 +63,12 @@ class train(object):
         self.y_train = y_train
 
     def del_W(self, y_lm1, e_l):
+        """
+            Weight update rule.
+        :param y_lm1: inputs to the layer.
+        :param e_l: error vector.
+        :return: weight update
+        """
         return - self.eta * np.matmul(y_lm1.T, e_l)
 
     def trainepoch(self, epoch):
@@ -79,7 +85,7 @@ class train(object):
             e.insert(0, y_target - y[-1])
             for l in range(4, 1, -1):
                 e.insert(0, np.matmul(e[0], self.model.get_layers[l].weight.T))
-            
+
             for i in range(4):
                 self.model.get_layers[i+1].weight = self.model.get_layers[i+1].weight + self.del_W(y[i].T, e[i])
 
