@@ -72,31 +72,41 @@ class train(object):
         return - self.eta * np.matmul(y_lm1.T, e_l)
 
     def trainepoch(self, epoch):
+        """
+            Single epoch training.
+        :param epoch: current epoch number.
+        """
 
         train_loss = 0
         for idx in range(self.batch_n):
 
+            # -- training data
             y0 = self.X_train[idx * self.batch_size:(idx + 1) * self.batch_size, :]/256
             y_target = self.y_train[idx * self.batch_size:(idx + 1) * self.batch_size]
 
+            # -- predict
             y = self.model(y0)
 
+            # -- compute error
             e = []
             e.insert(0, y_target - y[-1])
             for l in range(4, 1, -1):
                 e.insert(0, np.matmul(e[0], self.model.get_layers[l].weight.T))
 
+            # -- weight update
             for i in range(4):
                 self.model.get_layers[i+1].weight = self.model.get_layers[i+1].weight + self.del_W(y[i].T, e[i])
 
-            if idx == 10:
-                quit()
-
+            # -- compute loss
             train_loss += 0.5 * np.dot(np.transpose(e[-1]), e[-1]).item()
 
+        # -- log
         print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / n_train))
 
     def __call__(self):
+        """
+            Model training.
+        """
 
         for epoch in range(1,self.epochs+1):
             self.trainepoch(epoch)
