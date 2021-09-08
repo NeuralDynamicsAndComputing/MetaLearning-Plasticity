@@ -50,17 +50,20 @@ class model:
         return y0, y1, y2, y3, y4
 
 class train(object):
-    def __init__(self, X_train, y_train):
+    def __init__(self, X_train, y_train, eta=1e-3):
 
         self.model = model()
         self.epochs = 10
         self.n_layers = len(self.model.get_layers)
-        self.eta = 1e-3
+        self.eta = eta
         self.batch_size = 10
         self.batch_n = 20
 
         self.X_train = X_train
         self.y_train = y_train
+
+    def del_W(self, y_lm1, e_l):
+        return - self.eta * np.matmul(y_lm1.T, e_l)
 
     def trainepoch(self, epoch):
 
@@ -76,10 +79,9 @@ class train(object):
             e.insert(0, y_target - y[-1])
             for l in range(4, 1, -1):
                 e.insert(0, np.matmul(e[0], self.model.get_layers[l].weight.T))
-
+            
             for i in range(4):
-                tmp = self.eta * np.matmul(y[i].T, e[i])
-                self.model.get_layers[i+1].weight = self.model.get_layers[i+1].weight - tmp
+                self.model.get_layers[i+1].weight = self.model.get_layers[i+1].weight + self.del_W(y[i].T, e[i])
 
             if idx == 10:
                 quit()
