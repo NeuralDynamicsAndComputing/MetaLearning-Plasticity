@@ -4,6 +4,7 @@ from keras.datasets import mnist
 
 np.random.seed(42)
 
+
 def load_data(n_train):
 
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
@@ -12,6 +13,7 @@ def load_data(n_train):
     y_train = np.reshape(y_train[:n_train], (n_train, 1)).T
 
     return X_train, y_train
+
 
 class Linear:
     def __init__(self, input_size, output_size):
@@ -22,6 +24,7 @@ class Linear:
 
     def __call__(self, x):
         return np.matmul(self.weight, x)
+
 
 class model:
     def __init__(self):
@@ -47,6 +50,7 @@ class model:
         y4 = self.h_4(y3)
 
         return y0, y1, y2, y3, y4
+
 
 class train(object):
     def __init__(self, X_train, y_train, batch_size, eta=1e-3):
