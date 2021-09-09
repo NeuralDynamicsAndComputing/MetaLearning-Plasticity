@@ -8,8 +8,8 @@ def load_data(n_train):
 
     (X_train, y_train), (X_test, y_test) = mnist.load_data()
 
-    X_train = np.reshape(X_train[:n_train,:,:], (n_train, 784))
-    y_train = np.reshape(y_train[:n_train], (n_train, 1))
+    X_train = np.reshape(X_train[:n_train,:,:], (n_train, 784)).T
+    y_train = np.reshape(y_train[:n_train], (n_train, 1)).T
 
     return X_train, y_train
 
@@ -21,6 +21,10 @@ class Linear:
         self.weight = np.random.uniform(-w, w, (output_size, input_size))
 
     def __call__(self, x):
+
+        print(x.shape)
+        print(self.weight.shape)
+        print()
 
         return np.einsum('nm,Bm->Bn', self.weight, x)
 
@@ -50,14 +54,14 @@ class model:
         return y0, y1, y2, y3, y4
 
 class train(object):
-    def __init__(self, X_train, y_train, eta=1e-3):
+    def __init__(self, X_train, y_train, batch_size, eta=1e-3):
 
         self.model = model()
         self.epochs = 100
         self.n_layers = len(self.model.get_layers)
         self.eta = eta
-        self.batch_size = 10
-        self.batch_n = 20
+        self.batch_size = batch_size
+        self.batch_n = -(-len(X_train.T)//batch_size)
 
         self.X_train = X_train
         self.y_train = y_train
@@ -81,8 +85,8 @@ class train(object):
         for idx in range(self.batch_n):
 
             # -- training data
-            y0 = self.X_train[idx * self.batch_size:(idx + 1) * self.batch_size, :]/256
-            y_target = self.y_train[idx * self.batch_size:(idx + 1) * self.batch_size]
+            y0 = self.X_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]/256
+            y_target = self.y_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]
 
             # -- predict
             y = self.model(y0)
@@ -111,7 +115,9 @@ class train(object):
             self.trainepoch(epoch)
 
 n_train = 200
+batch_size = 10
+
 X_train, y_train = load_data(n_train)
-my_train = train(X_train, y_train)
+my_train = train(X_train, y_train, batch_size)
 
 my_train()
