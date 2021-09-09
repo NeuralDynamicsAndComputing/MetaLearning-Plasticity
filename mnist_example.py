@@ -26,9 +26,9 @@ class Linear:
         return np.matmul(self.weight, x)
 
 
-class model:
+class Model:
     def __init__(self):
-        super(model, self).__init__()
+        super(Model, self).__init__()
 
         self.h_1 = Linear(784, 512)
         self.h_2 = Linear(512, 264)
@@ -52,10 +52,10 @@ class model:
         return y0, y1, y2, y3, y4
 
 
-class train(object):
+class Train(object):
     def __init__(self, X_train, y_train, batch_size, eta=1e-3):
 
-        self.model = model()
+        self.model = Model()
         self.epochs = 100
         self.n_layers = len(self.model.get_layers)
         self.eta = eta
@@ -117,6 +117,6 @@ n_train = 200
 batch_size = 10
 
 X_train, y_train = load_data(n_train)
-my_train = train(X_train, y_train, batch_size)
+my_train = Train(X_train, y_train, batch_size)
 
 my_train()
