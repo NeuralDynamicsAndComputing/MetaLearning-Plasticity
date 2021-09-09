@@ -21,12 +21,7 @@ class Linear:
         self.weight = np.random.uniform(-w, w, (output_size, input_size))
 
     def __call__(self, x):
-
-        print(x.shape)
-        print(self.weight.shape)
-        print()
-
-        return np.einsum('nm,Bm->Bn', self.weight, x)
+        return np.matmul(self.weight, x)
 
 class model:
     def __init__(self):
@@ -73,7 +68,7 @@ class train(object):
         :param e_l: error vector.
         :return: weight update
         """
-        return - self.eta * np.matmul(e_l.T, y_lm1)
+        return - self.eta * np.matmul(e_l, y_lm1.T)
 
     def trainepoch(self, epoch):
         """
@@ -94,14 +89,14 @@ class train(object):
             # -- compute error
             e = [y_target - y[-1]]
             for l in range(4, 1, -1):
-                e.insert(0, np.einsum('nm,Bm->Bn', self.model.get_layers[l].weight.T, e[0]))
+                e.insert(0, np.matmul(self.model.get_layers[l].weight.T, e[0]))
 
             # -- weight update
             for l, key in enumerate(self.model.get_layers.keys()):
                 self.model.get_layers[key].weight = self.model.get_layers[key].weight + self.del_W(y[l], e[l])
 
             # -- compute loss
-            train_loss += 0.5 * np.dot(e[-1].T, e[-1]).item()
+            train_loss += 0.5 * np.matmul(e[-1], e[-1].T).item()
 
         # -- log
         print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / n_train))
