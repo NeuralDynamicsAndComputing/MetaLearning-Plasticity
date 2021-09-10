@@ -31,10 +31,10 @@ class Model:
     def __init__(self):
         super(Model, self).__init__()
 
-        self.h_1 = Linear(784, 512)
-        self.h_2 = Linear(512, 264)
-        self.h_3 = Linear(264, 128)
-        self.h_4 = Linear(128, 1)
+        self.h_1 = Linear(784, 1500)
+        self.h_2 = Linear(1500, 1500)
+        self.h_3 = Linear(1500, 1500)
+        self.h_4 = Linear(1500, 1)
 
     @property
     def get_layers(self):
