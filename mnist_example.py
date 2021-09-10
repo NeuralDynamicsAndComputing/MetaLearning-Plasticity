@@ -5,7 +5,6 @@ import argparse
 
 
 def load_data(n_train):
-
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     x_train = np.reshape(x_train[:n_train, :, :], (n_train, 784)).T
@@ -16,8 +15,6 @@ def load_data(n_train):
 
 class Linear:
     def __init__(self, input_size, output_size):
-        super(Linear, self).__init__()
-
         w = 1. / np.sqrt(input_size)
         self.weight = np.random.uniform(-w, w, (output_size, input_size))
 
@@ -27,8 +24,6 @@ class Linear:
 
 class Model:
     def __init__(self):
-        super(Model, self).__init__()
-
         self.h_1 = Linear(784, 1500)
         self.h_2 = Linear(1500, 1500)
         self.h_3 = Linear(1500, 1500)
@@ -43,7 +38,6 @@ class Model:
         return np.maximum(np.zeros(x.shape), x)
 
     def __call__(self, y0):
-
         y1 = self.relu(self.h_1(y0))
         y2 = self.relu(self.h_2(y1))
         y3 = self.relu(self.h_3(y2))
@@ -54,7 +48,6 @@ class Model:
 
 class Train:
     def __init__(self, x_train, y_train, args):
-
         self.model = Model()
         self.epochs = args.epochs
         self.n_layers = len(self.model.get_layers)
@@ -80,7 +73,6 @@ class Train:
             Single epoch training.
         :param epoch: current epoch number.
         """
-
         train_loss = 0
         for idx in range(self.batch_n):
 
