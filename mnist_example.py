@@ -52,7 +52,7 @@ class Model:
         return y0, y1, y2, y3, y4
 
 
-class Train(object):
+class Train:
     def __init__(self, x_train, y_train, args):
 
         self.model = Model()
