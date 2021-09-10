@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from keras.datasets import mnist
+import argparse
 
 np.random.seed(42)
 
@@ -12,7 +13,7 @@ def load_data(n_train):
     x_train = np.reshape(x_train[:n_train, :, :], (n_train, 784)).T
     y_train = np.reshape(y_train[:n_train], (n_train, 1)).T
 
-    return x_train, y_train
+    return x_train, y_train, x_test, y_test
 
 
 class Linear:
@@ -54,14 +55,15 @@ class Model:
 
 
 class Train(object):
-    def __init__(self, x_train, y_train, batch_size, epochs, eta=1e-3):  # todo: add args
+    def __init__(self, x_train, y_train, args):
 
         self.model = Model()
-        self.epochs = epochs
+        self.epochs = args.epochs
         self.n_layers = len(self.model.get_layers)
-        self.eta = eta
-        self.batch_size = batch_size
-        self.batch_n = -(-len(X_train.T)//batch_size)
+        self.eta = args.eta
+        self.batch_size = args.batch_size
+        self.N = len(x_train.T)
+        self.batch_n = -(-self.N//args.batch_size)
 
         self.X_train = x_train
         self.y_train = y_train
@@ -104,7 +106,7 @@ class Train(object):
             train_loss += 0.5 * np.matmul(e[-1], e[-1].T).item()
 
         # -- log
-        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / n_train))
+        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / self.N))
 
     def __call__(self):
         """
@@ -115,11 +117,27 @@ class Train(object):
             self.train_epoch(epoch)
 
 
-n_train = 200
-batch_size = 10
-epochs = 100
+def parse_args():
+    desc = "Numpy implementation of mnist label predictor."
+    parser = argparse.ArgumentParser(description=desc)
 
-X_train, y_train = load_data(n_train)
-my_train = Train(X_train, y_train, batch_size, epochs)
+    # -- training params
+    parser.add_argument('--epochs', type=int, default=100, help='The number of epochs to run.')
+    parser.add_argument('--batch_size', type=int, default=10, help='The size of each batch.')
+    parser.add_argument('--N', type=int, default=200, help='Number of training data.')
+    parser.add_argument('--eta', type=float, default=1e-3, help='Learning rate.')
 
-my_train()
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    x_train, y_train, _, _ = load_data(args.N)
+    my_train = Train(x_train, y_train, args)
+
+    my_train()
+
+
+if __name__ == '__main__':
+    main()
