@@ -1,4 +1,5 @@
 data/*
+Test_pytorch.py
 results/*
 .DS_Store
 .idea/*
