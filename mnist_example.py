@@ -44,18 +44,18 @@ class Model:
 
     def __call__(self, y0):
 
-        y1 = self.h_1(y0)
-        y2 = self.h_2(y1)
-        y3 = self.h_3(y2)
-        y4 = self.h_4(y3)
+        y1 = self.ReLU(self.h_1(y0))
+        y2 = self.ReLU(self.h_2(y1))
+        y3 = self.ReLU(self.h_3(y2))
+        y4 = self.ReLU(self.h_4(y3))
 
         return y0, y1, y2, y3, y4
 
 
 class Train(object):
-    def __init__(self, X_train, y_train, batch_size, epochs,eta=1e-3):
+    def __init__(self, X_train, y_train, batch_size, epochs,eta=1e-3): # todo: add args
 
-        self.model = Model() # todo: add args
+        self.model = Model()
         self.epochs = epochs
         self.n_layers = len(self.model.get_layers)
         self.eta = eta
@@ -93,7 +93,7 @@ class Train(object):
             # -- compute error
             e = [y[-1] - y_target]
             for l in range(4, 1, -1):
-                e.insert(0, np.matmul(self.model.get_layers[l].weight.T, e[0]))
+                e.insert(0, np.matmul(self.model.get_layers[l].weight.T, e[0]) * np.heaviside(y[l-1], 0.0))
 
             # -- weight update
             for l, key in enumerate(self.model.get_layers.keys()):
