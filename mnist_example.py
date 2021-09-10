@@ -7,12 +7,12 @@ np.random.seed(42)
 
 def load_data(n_train):
 
-    (X_train, y_train), (X_test, y_test) = mnist.load_data()
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
-    X_train = np.reshape(X_train[:n_train,:,:], (n_train, 784)).T
+    x_train = np.reshape(x_train[:n_train, :, :], (n_train, 784)).T
     y_train = np.reshape(y_train[:n_train], (n_train, 1)).T
 
-    return X_train, y_train
+    return x_train, y_train
 
 
 class Linear:
@@ -39,21 +39,21 @@ class Model:
     def get_layers(self):
         return {1: self.h_1, 2: self.h_2, 3: self.h_3, 4: self.h_4}
 
-    def ReLU(self, x):
+    def relu(self, x):
         return np.maximum(np.zeros(x.shape), x)
 
     def __call__(self, y0):
 
-        y1 = self.ReLU(self.h_1(y0))
-        y2 = self.ReLU(self.h_2(y1))
-        y3 = self.ReLU(self.h_3(y2))
-        y4 = self.ReLU(self.h_4(y3))
+        y1 = self.relu(self.h_1(y0))
+        y2 = self.relu(self.h_2(y1))
+        y3 = self.relu(self.h_3(y2))
+        y4 = self.relu(self.h_4(y3))
 
         return y0, y1, y2, y3, y4
 
 
 class Train(object):
-    def __init__(self, X_train, y_train, batch_size, epochs,eta=1e-3): # todo: add args
+    def __init__(self, x_train, y_train, batch_size, epochs, eta=1e-3):  # todo: add args
 
         self.model = Model()
         self.epochs = epochs
@@ -62,10 +62,10 @@ class Train(object):
         self.batch_size = batch_size
         self.batch_n = -(-len(X_train.T)//batch_size)
 
-        self.X_train = X_train
+        self.X_train = x_train
         self.y_train = y_train
 
-    def del_W(self, y_lm1, e_l):
+    def del_w(self, y_lm1, e_l):
         """
             Weight update rule.
         :param y_lm1: inputs to the layer.
@@ -74,7 +74,7 @@ class Train(object):
         """
         return - self.eta * np.matmul(e_l, y_lm1.T)
 
-    def trainepoch(self, epoch):
+    def train_epoch(self, epoch):
         """
             Single epoch training.
         :param epoch: current epoch number.
@@ -97,7 +97,7 @@ class Train(object):
 
             # -- weight update
             for l, key in enumerate(self.model.get_layers.keys()):
-                self.model.get_layers[key].weight = self.model.get_layers[key].weight + self.del_W(y[l], e[l])
+                self.model.get_layers[key].weight = self.model.get_layers[key].weight + self.del_w(y[l], e[l])
 
             # -- compute loss
             train_loss += 0.5 * np.matmul(e[-1], e[-1].T).item()
@@ -110,8 +110,9 @@ class Train(object):
             Model training.
         """
 
-        for epoch in range(1,self.epochs+1):
-            self.trainepoch(epoch)
+        for epoch in range(1, self.epochs+1):
+            self.train_epoch(epoch)
+
 
 n_train = 200
 batch_size = 10
