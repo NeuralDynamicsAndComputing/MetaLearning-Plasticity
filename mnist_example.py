@@ -39,7 +39,8 @@ class Model:
     def get_layers(self):
         return {1: self.h_1, 2: self.h_2, 3: self.h_3, 4: self.h_4}
 
-    def relu(self, x):
+    @staticmethod
+    def relu(x):
         return np.maximum(np.zeros(x.shape), x)
 
     def __call__(self, y0):
