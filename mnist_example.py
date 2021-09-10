@@ -3,8 +3,6 @@ import torch
 from keras.datasets import mnist
 import argparse
 
-np.random.seed(42)
-
 
 def load_data(n_train):
 
