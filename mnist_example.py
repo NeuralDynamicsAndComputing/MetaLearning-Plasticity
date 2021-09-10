@@ -53,10 +53,10 @@ class Model:
 
 
 class Train(object):
-    def __init__(self, X_train, y_train, batch_size, eta=1e-3):
+    def __init__(self, X_train, y_train, batch_size, epochs,eta=1e-3):
 
-        self.model = Model()
-        self.epochs = 100
+        self.model = Model() # todo: add args
+        self.epochs = epochs
         self.n_layers = len(self.model.get_layers)
         self.eta = eta
         self.batch_size = batch_size
@@ -91,7 +91,7 @@ class Train(object):
             y = self.model(y0)
 
             # -- compute error
-            e = [y_target - y[-1]]
+            e = [y[-1] - y_target]
             for l in range(4, 1, -1):
                 e.insert(0, np.matmul(self.model.get_layers[l].weight.T, e[0]))
 
@@ -115,8 +115,9 @@ class Train(object):
 
 n_train = 200
 batch_size = 10
+epochs = 100
 
 X_train, y_train = load_data(n_train)
-my_train = Train(X_train, y_train, batch_size)
+my_train = Train(X_train, y_train, batch_size, epochs)
 
 my_train()
