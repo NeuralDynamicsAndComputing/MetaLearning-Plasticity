@@ -55,7 +55,6 @@ class Train:
         self.batch_size = args.batch_size
         self.N = len(x_train.T)
         self.batch_n = -(-self.N//args.batch_size)
-
         self.X_train = x_train
         self.y_train = y_train
 
@@ -75,7 +74,6 @@ class Train:
         """
         train_loss = 0
         for idx in range(self.batch_n):
-
             # -- training data
             y0 = self.X_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]/256
             y_target = self.y_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]
@@ -102,7 +100,6 @@ class Train:
         """
             Model training.
         """
-
         for epoch in range(1, self.epochs+1):
             self.train_epoch(epoch)
 
