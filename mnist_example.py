@@ -95,12 +95,12 @@ class Train(object):
 
             # -- compute error
             e = [y[-1] - y_target]
-            for l in range(4, 1, -1):
-                e.insert(0, np.matmul(self.model.get_layers[l].weight.T, e[0]) * np.heaviside(y[l-1], 0.0))
+            for i in range(4, 1, -1):
+                e.insert(0, np.matmul(self.model.get_layers[i].weight.T, e[0]) * np.heaviside(y[i-1], 0.0))
 
             # -- weight update
-            for l, key in enumerate(self.model.get_layers.keys()):
-                self.model.get_layers[key].weight = self.model.get_layers[key].weight + self.del_w(y[l], e[l])
+            for i, key in enumerate(self.model.get_layers.keys()):
+                self.model.get_layers[key].weight = self.model.get_layers[key].weight + self.del_w(y[i], e[i])
 
             # -- compute loss
             train_loss += 0.5 * np.matmul(e[-1], e[-1].T).item()
