@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 from keras.datasets import mnist
 import argparse
 
@@ -24,10 +26,10 @@ class Linear:
 
 class Model:
     def __init__(self):
-        self.h_1 = Linear(784, 1500)
-        self.h_2 = Linear(1500, 1500)
-        self.h_3 = Linear(1500, 1500)
-        self.h_4 = Linear(1500, 1)
+        self.h_1 = Linear(784, 512)
+        self.h_2 = Linear(512, 256)
+        self.h_3 = Linear(256, 128)
+        self.h_4 = Linear(128, 1)
 
     @property
     def get_layers(self):
