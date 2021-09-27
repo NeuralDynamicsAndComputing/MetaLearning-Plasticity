@@ -33,6 +33,14 @@ class Model:
     def get_layers(self):
         return {1: self.h_1, 2: self.h_2, 3: self.h_3, 4: self.h_4}
 
+    @property
+    def feedback_matrix(self):
+        feed_mat = {}
+        for i in range(1, len(self.get_layers)):
+            feed_mat[i] = self.get_layers[i+1].weight.T
+
+        return feed_mat
+
     @staticmethod
     def relu(x):
         return np.maximum(np.zeros(x.shape), x)
@@ -48,24 +56,45 @@ class Model:
 
 class Train:
     def __init__(self, x_train, y_train, args):
+
+        # -- model params
         self.model = Model()
-        self.epochs = args.epochs
+        self.B = self.model.feedback_matrix
         self.n_layers = len(self.model.get_layers)
+
+        # -- training params
         self.eta = args.eta
-        self.batch_size = args.batch_size
-        self.N = len(x_train.T)
-        self.batch_n = -(-self.N//args.batch_size)
         self.X_train = x_train
         self.y_train = y_train
+        self.N = len(x_train.T)
+        self.epochs = args.epochs
+        self.batch_size = args.batch_size
+        self.batch_n = -(-self.N//args.batch_size)
 
-    def del_w(self, y_lm1, e_l):
+    def feedback_update(self):
+        """
+            updates feedback matrix B.
+        :return:
+        """
+        for i in range(1, self.n_layers):
+            self.B[i] = self.model.get_layers[i+1].weight.T
+
+    def weight_update(self, y, y_target):
         """
             Weight update rule.
-        :param y_lm1: inputs to the layer.
-        :param e_l: error vector.
-        :return: weight update
+        :param y: input, activations, and prediction
+        :param y_target: target label
         """
-        return - self.eta * np.matmul(e_l, y_lm1.T)
+
+        # -- compute error
+        self.e = [y[-1] - y_target]
+        for i in range(self.n_layers, 1, -1):
+            self.e.insert(0, np.matmul(self.B[i-1], self.e[0]) * np.heaviside(y[i-1], 0.0))
+
+        # -- weight update
+        for i, key in enumerate(self.model.get_layers.keys()):
+            self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
+                                                self.eta * np.matmul(self.e[i], y[i].T)
 
     def train_epoch(self, epoch):
         """
@@ -81,17 +110,14 @@ class Train:
             # -- predict
             y = self.model(y0)
 
-            # -- compute error
-            e = [y[-1] - y_target]
-            for i in range(4, 1, -1):
-                e.insert(0, np.matmul(self.model.get_layers[i].weight.T, e[0]) * np.heaviside(y[i-1], 0.0))
-
             # -- weight update
-            for i, key in enumerate(self.model.get_layers.keys()):
-                self.model.get_layers[key].weight = self.model.get_layers[key].weight + self.del_w(y[i], e[i])
+            self.weight_update(y, y_target)
+
+            # -- feedback update
+            self.feedback_update()
 
             # -- compute loss
-            train_loss += 0.5 * np.matmul(e[-1], e[-1].T).item()
+            train_loss += 0.5 * np.matmul(self.e[-1], self.e[-1].T).item()
 
         # -- log
         print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / self.N))
