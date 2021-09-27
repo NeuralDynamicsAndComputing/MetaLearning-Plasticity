@@ -5,6 +5,8 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 from keras.datasets import mnist
 import argparse
 
+np.random.seed(0)
+
 
 def load_data(n_train):
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
@@ -73,13 +75,14 @@ class Train:
         self.batch_size = args.batch_size
         self.batch_n = -(-self.N//args.batch_size)
 
-    def feedback_update(self):
+    def feedback_update(self, y):
         """
             updates feedback matrix B.
+        :param y: input, activations, and prediction
         :return:
         """
         for i in range(1, self.n_layers):
-            self.B[i] = self.model.get_layers[i+1].weight.T
+            self.B[i] -= self.eta * np.matmul(self.e[i], y[i].T).T
 
     def weight_update(self, y, y_target):
         """
@@ -116,7 +119,7 @@ class Train:
             self.weight_update(y, y_target)
 
             # -- feedback update
-            self.feedback_update()
+            self.feedback_update(y)
 
             # -- compute loss
             train_loss += 0.5 * np.matmul(self.e[-1], self.e[-1].T).item()
