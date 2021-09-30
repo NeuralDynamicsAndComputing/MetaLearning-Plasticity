@@ -44,18 +44,13 @@ class OmniglotDataset(Dataset):
                     f.write(chunk)
 
     def __len__(self):
-        return len(self.img_labels)
+        return len(self.char_list)
 
     def __getitem__(self, idx):
 
         image = []
-        for img in os.listdir(self.path + '/' + self.char_list[0]):
-            img_path = self.path + '/' + self.char_list[0] + '/' + img
+        for img in os.listdir(self.path + '/' + self.char_list[idx]):
+            img_path = self.path + '/' + self.char_list[idx] + '/' + img
             image.append(self.transform(Image.open(img_path, mode='r').convert('L')))
 
-        print(torch.ones_like(20))
-
         return torch.cat(image), idx*torch.ones_like(torch.empty(20))
-
-
-OmniglotDataset()
