@@ -6,6 +6,7 @@ import requests
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 
+import numpy as np
 import torchvision.transforms as transforms
 
 
@@ -64,6 +65,7 @@ class OmniglotDataset(Dataset):
 
 tasks = 5
 steps = 5
+iid = True
 
 TrainDataset = DataLoader(dataset=OmniglotDataset(steps), batch_size=tasks, shuffle=True)
 
@@ -72,7 +74,16 @@ for idx, (img_trn, lbl_trn, img_tst, lbl_tst) in enumerate(TrainDataset):
     img_tst = torch.reshape(img_tst, (tasks * 5,  84, 84))
     lbl_tst = torch.reshape(lbl_tst, (1, tasks * 5))
 
-    for img, label in zip(torch.reshape(img_trn, (tasks * steps, 84, 84)), torch.reshape(lbl_trn, (tasks * steps, 1))):
+    img_trn = torch.reshape(img_trn, (tasks * steps, 84, 84))
+    lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
+
+    if iid:
+        perm = np.random.choice(range(tasks * steps), tasks * steps, False)
+
+        img_trn = img_trn[perm]
+        lbl_trn = lbl_trn[perm]
+
+    for image, label in zip(img_trn, lbl_trn):
 
         print(label)
 
