@@ -56,7 +56,7 @@ class OmniglotDataset(Dataset):
             image.append(self.transform(Image.open(img_path, mode='r').convert('L')))
 
         image = torch.cat(image)
-        index_vec = idx*torch.ones_like(torch.empty(20))
+        index_vec = idx*torch.ones_like(torch.empty(20), dtype=int)
 
         return image[:self.steps], index_vec[:self.steps], \
                image[self.steps:self.steps+5], index_vec[self.steps:self.steps+5]
