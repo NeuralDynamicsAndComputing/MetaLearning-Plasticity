@@ -91,7 +91,7 @@ class MyModel(nn.Module):
 
 
 class Train:
-    def __init__(self, x_train, y_train, args):
+    def __init__(self, trainset, args):
 
         # -- model params
         self.model = MyModel()
@@ -101,17 +101,20 @@ class Train:
 
         # -- training params
         self.eta = args.eta
-        self.X_train = x_train  # todo: define dataloader here!
-        self.y_train = y_train  # todo: remove
-        self.N = len(x_train.T)  # fixme
         self.epochs = args.epochs
         self.batch_size = args.batch_size  # todo: remove
-        self.batch_n = -(-self.N//args.batch_size)  # todo: remove
+        self.batch_n = -(-args.N//args.batch_size)  # todo: remove
 
-        # todo: swap w/ Omniglot dataloader
+        # -- data params todo: swap w/ Omniglot dataloader
+        x_train, y_train, _, _ = load_data(args.N)  # todo: remove
+        self.X_train = x_train  # todo: remove
+        self.y_train = y_train  # todo: remove
         mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
-        self.TrainDataset = DataLoader(mnist_trainset, batch_size=self.batch_size, shuffle=False)
+        self.TrainDataset = DataLoader(mnist_trainset, batch_size=self.batch_size, shuffle=False)  # fixme: pass dataset/dataloader from main?
 
+        self.TrainDataset_Omni = trainset
+
+        # -- optimization params
         self.optimizer = optim.SGD(self.model.parameters(), lr=1e-3)  # todo: switch this w/ costume update rule
 
     def feedback_update(self, y):  # fixme: use pytorch functions to update B matrix?
@@ -197,15 +200,21 @@ def parse_args():
     parser.add_argument('--N', type=int, default=200, help='Number of training data.')
     parser.add_argument('--eta', type=float, default=1e-3, help='Learning rate.')
 
+    # -- meta-training params
+    parser.add_argument('--steps', type=int, default=5, help='')  # fixme: add definition
+    parser.add_argument('--tasks', type=int, default=5, help='')  # fixme: add definition
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
-    x_train, y_train, _, _ = load_data(args.N)
-    my_train = Train(x_train, y_train, args)
+    # -- load data
+    train_dataset = DataLoader(dataset=OmniglotDataset(args.steps), batch_size=args.tasks, shuffle=True)
 
+    # -- train model
+    my_train = Train(train_dataset, args)
     my_train()
 
 
