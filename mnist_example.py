@@ -8,8 +8,10 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from keras.datasets import mnist
 from torch import nn
+import torch.optim as optim
 from Dataset import OmniglotDataset
 from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
 
 np.random.seed(0)
 
@@ -110,10 +112,10 @@ class Train:
     def __init__(self, x_train, y_train, args):
 
         # -- model params
-        self.model = Model()  # todo: remove (use self.model = MyModel())
+        self.model = MyModel()  # todo: remove (use self.model = MyModel())
 
-        self.B = self.model.feedback_matrix  # todo: redefine in MyModel
-        self.n_layers = len(self.model.get_layers)  # fixme
+        # self.B = self.model.feedback_matrix  # todo: redefine in MyModel
+        # self.n_layers = len(self.model.get_layers)  # fixme
 
         # -- training params
         self.eta = args.eta
@@ -123,6 +125,12 @@ class Train:
         self.epochs = args.epochs
         self.batch_size = args.batch_size  # todo: remove
         self.batch_n = -(-self.N//args.batch_size)  # todo: remove
+
+        # todo: swap w/ Omniglot dataloader
+        mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
+        self.TrainDataset = DataLoader(mnist_trainset, batch_size=self.batch_size, shuffle=False)
+
+        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-3)  # todo: switch this w/ costume update rule
 
     def feedback_update(self, y):  # fixme: use pytorch functions to update B matrix?
         """
@@ -155,14 +163,14 @@ class Train:
             self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
                                                 self.eta * np.matmul(self.e[i], y[i].T)
 
-    def train_epoch(self, epoch):
+    def train_epoch_(self, epoch):  # todo: remove
         """
             Single epoch training.
         :param epoch: current epoch number.
         """
         train_loss = 0
         for idx in range(self.batch_n):
-            # -- training data # todo: 1) use this for a pytorch network, 2) sub w/ Omniglot (swap w/ 'Myload_data')
+            # -- training data
             y0 = self.X_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]/256
             y_target = self.y_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]
 
@@ -180,6 +188,40 @@ class Train:
 
         # -- log
         print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / self.N))
+
+    def train_epoch(self, epoch):
+        """
+            Single epoch training.
+        :param epoch: current epoch number.
+        """
+        self.model.train()
+        train_loss = 0
+
+        for batch_idx, data in enumerate(self.TrainDataset):
+
+            # -- training data # todo: swap w/ Omniglot dataloader and call to 'Myload_data'
+            img, label = data
+
+            if batch_idx < 10:  # fixme
+                self.optimizer.zero_grad()
+
+                # -- predict
+                y4 = self.model(img)
+
+                # -- compute loss
+                e = y4 - label.unsqueeze(1)
+                loss = 0.5 * e.T @ e
+
+                # -- weight update todo: 1) compute W updates w/ error and feedback, 2) switch to a costume update rule
+                loss.backward()
+                train_loss += loss.item()
+                self.optimizer.step()
+
+                # -- feedback update
+                # todo: 1) define feedback and its update rule 2) meta learn feedback
+
+        # -- log
+        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / 200))
 
     def __call__(self):
         """
