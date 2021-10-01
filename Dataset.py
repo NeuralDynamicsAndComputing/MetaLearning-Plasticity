@@ -33,9 +33,7 @@ class OmniglotDataset(Dataset):
         self.steps = steps
 
         # --
-        list_alph = [[a_dir + '/' + j for j in os.listdir(self.path + '/' + a_dir)] for a_dir in os.listdir(self.path)]
-        self.char_list = [item for sublist in list_alph for item in sublist]
-
+        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders]
         self.transform = transforms.Compose([transforms.Resize((84, 84)), transforms.ToTensor()])
 
     @staticmethod
@@ -47,20 +45,18 @@ class OmniglotDataset(Dataset):
                     f.write(chunk)
 
     def __len__(self):
-        return len(self.char_list)
+        return len(self.char_path)
 
     def __getitem__(self, idx):
 
-        image = []
-        for img in os.listdir(self.path + '/' + self.char_list[idx]):
-            img_path = self.path + '/' + self.char_list[idx] + '/' + img
-            image.append(self.transform(Image.open(img_path, mode='r').convert('L')))
+        img = []
+        for img_ in os.listdir(self.char_path[idx]):
+            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
-        image = torch.cat(image)
-        index_vec = idx*torch.ones_like(torch.empty(20), dtype=int)
+        img = torch.cat(img)
+        idx_vec = idx*torch.ones_like(torch.empty(20), dtype=int)
 
-        return image[:self.steps], index_vec[:self.steps], \
-               image[self.steps:self.steps+5], index_vec[self.steps:self.steps+5]
+        return img[:self.steps], idx_vec[:self.steps], img[self.steps:self.steps+5], idx_vec[self.steps:self.steps+5]
 
 
 tasks = 5
