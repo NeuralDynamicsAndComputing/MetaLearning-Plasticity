@@ -52,18 +52,18 @@ class Linear:  # fixme: no need for this
 
 
 class Model:
-    def __init__(self):
+    def __init__(self):  # fixme: no need for this
         self.h_1 = Linear(784, 512)
         self.h_2 = Linear(512, 256)
         self.h_3 = Linear(256, 128)
         self.h_4 = Linear(128, 1)
 
     @property
-    def get_layers(self):
+    def get_layers(self):  # fixme: I might need this
         return {1: self.h_1, 2: self.h_2, 3: self.h_3, 4: self.h_4}
 
     @property
-    def feedback_matrix(self):
+    def feedback_matrix(self):   # fixme: I might need this
         feed_mat = {}
         for i in range(1, len(self.get_layers)):
             feed_mat[i] = self.get_layers[i+1].weight.T
@@ -71,7 +71,7 @@ class Model:
         return feed_mat
 
     @staticmethod
-    def relu(x):
+    def relu(x):  # fixme: no need for this
         return np.maximum(np.zeros(x.shape), x)
 
     def __call__(self, y0):
@@ -80,7 +80,7 @@ class Model:
         y3 = self.relu(self.h_3(y2))
         y4 = self.relu(self.h_4(y3))
 
-        return y0, y1, y2, y3, y4
+        return y0, y1, y2, y3, y4  # fixme: I might need this
 
 
 class Train:
