@@ -6,13 +6,15 @@ import numpy as np
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from Dataset import OmniglotDataset
 from keras.datasets import mnist
+from torch import nn
+from Dataset import OmniglotDataset
+from torch.utils.data import DataLoader
 
 np.random.seed(0)
 
 
-def load_data(n_train):
+def load_data(n_train):  # todo: replace w/ 'Myload_data'
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     x_train = np.reshape(x_train[:n_train, :, :], (n_train, 784)).T
@@ -21,7 +23,26 @@ def load_data(n_train):
     return x_train, y_train, x_test, y_test
 
 
-class Linear:
+def Myload_data(data, tasks=5, steps=5, iid=True):
+
+    img_trn, lbl_trn, img_tst, lbl_tst = data
+
+    img_tst = torch.reshape(img_tst, (tasks * 5,  84, 84))
+    lbl_tst = torch.reshape(lbl_tst, (1, tasks * 5))
+
+    img_trn = torch.reshape(img_trn, (tasks * steps, 84, 84))
+    lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
+
+    if iid:
+        perm = np.random.choice(range(tasks * steps), tasks * steps, False)
+
+        img_trn = img_trn[perm]
+        lbl_trn = lbl_trn[perm]
+
+    return img_trn, lbl_trn, img_tst, lbl_tst
+
+
+class Linear:  # fixme: no need for this
     def __init__(self, input_size, output_size):
         w = 1. / np.sqrt(input_size)
         self.weight = np.random.uniform(-w, w, (output_size, input_size))

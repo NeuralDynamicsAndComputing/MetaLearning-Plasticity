@@ -59,13 +59,9 @@ class OmniglotDataset(Dataset):
         return img[:self.steps], idx_vec[:self.steps], img[self.steps:self.steps+5], idx_vec[self.steps:self.steps+5]
 
 
-tasks = 5
-steps = 5
-iid = True
+def Myload_data(data, tasks=5, steps=5, iid=True):
 
-TrainDataset = DataLoader(dataset=OmniglotDataset(steps), batch_size=tasks, shuffle=True)
-
-for idx, (img_trn, lbl_trn, img_tst, lbl_tst) in enumerate(TrainDataset):
+    img_trn, lbl_trn, img_tst, lbl_tst = data
 
     img_tst = torch.reshape(img_tst, (tasks * 5,  84, 84))
     lbl_tst = torch.reshape(lbl_tst, (1, tasks * 5))
@@ -78,6 +74,19 @@ for idx, (img_trn, lbl_trn, img_tst, lbl_tst) in enumerate(TrainDataset):
 
         img_trn = img_trn[perm]
         lbl_trn = lbl_trn[perm]
+
+    return img_trn, lbl_trn, img_tst, lbl_tst
+
+
+tasks = 5
+steps = 5
+iid = True
+
+TrainDataset = DataLoader(dataset=OmniglotDataset(steps), batch_size=tasks, shuffle=True)
+
+for idx, data in enumerate(TrainDataset):
+
+    img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
 
     for image, label in zip(img_trn, lbl_trn):
 
