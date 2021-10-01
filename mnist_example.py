@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader
 np.random.seed(0)
 
 
-def load_data(n_train):  # todo: replace w/ 'Myload_data'
+def load_data(n_train):  # todo: swap w/ 'Myload_data'
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     x_train = np.reshape(x_train[:n_train, :, :], (n_train, 784)).T
@@ -42,7 +42,7 @@ def Myload_data(data, tasks=5, steps=5, iid=True):
     return img_trn, lbl_trn, img_tst, lbl_tst
 
 
-class Linear:  # fixme: no need for this
+class Linear:  # todo: remove
     def __init__(self, input_size, output_size):
         w = 1. / np.sqrt(input_size)
         self.weight = np.random.uniform(-w, w, (output_size, input_size))
@@ -52,26 +52,28 @@ class Linear:  # fixme: no need for this
 
 
 class Model:
-    def __init__(self):  # fixme: no need for this
+    def __init__(self):  # todo: remove
         self.h_1 = Linear(784, 512)
         self.h_2 = Linear(512, 256)
         self.h_3 = Linear(256, 128)
         self.h_4 = Linear(128, 1)
 
     @property
-    def get_layers(self):  # fixme: I might need this
+    def get_layers(self):  # fixme: might need
         return {1: self.h_1, 2: self.h_2, 3: self.h_3, 4: self.h_4}
 
     @property
-    def feedback_matrix(self):   # fixme: I might need this
+    def feedback_matrix(self):   # fixme: keep
+
+        # todo: define B as network parameter
         feed_mat = {}
-        for i in range(1, len(self.get_layers)):
-            feed_mat[i] = self.get_layers[i+1].weight.T
+        for i in range(1, len(self.get_layers)):  # todo: find a better way to get an iterator over network weights
+            feed_mat[i] = self.get_layers[i+1].weight.T  # todo: may need to change init of B.
 
         return feed_mat
 
     @staticmethod
-    def relu(x):  # fixme: no need for this
+    def relu(x):  # todo: remove
         return np.maximum(np.zeros(x.shape), x)
 
     def __call__(self, y0):
@@ -80,7 +82,7 @@ class Model:
         y3 = self.relu(self.h_3(y2))
         y4 = self.relu(self.h_4(y3))
 
-        return y0, y1, y2, y3, y4  # fixme: I might need this
+        return y0, y1, y2, y3, y4  # fixme: might need
 
 
 class MyModel(nn.Module):
@@ -108,20 +110,21 @@ class Train:
     def __init__(self, x_train, y_train, args):
 
         # -- model params
-        self.model = Model()
-        self.B = self.model.feedback_matrix
-        self.n_layers = len(self.model.get_layers)
+        self.model = Model()  # todo: remove (use self.model = MyModel())
+
+        self.B = self.model.feedback_matrix  # todo: redefine in MyModel
+        self.n_layers = len(self.model.get_layers)  # fixme
 
         # -- training params
         self.eta = args.eta
-        self.X_train = x_train
-        self.y_train = y_train
-        self.N = len(x_train.T)
+        self.X_train = x_train  # todo: define dataloader here!
+        self.y_train = y_train  # todo: remove
+        self.N = len(x_train.T)  # fixme
         self.epochs = args.epochs
-        self.batch_size = args.batch_size
-        self.batch_n = -(-self.N//args.batch_size)
+        self.batch_size = args.batch_size  # todo: remove
+        self.batch_n = -(-self.N//args.batch_size)  # todo: remove
 
-    def feedback_update(self, y):
+    def feedback_update(self, y):  # fixme: use pytorch functions to update B matrix?
         """
             updates feedback matrix B.
         :param y: input, activations, and prediction
@@ -135,6 +138,11 @@ class Train:
             Weight update rule.
         :param y: input, activations, and prediction
         :param y_target: target label
+
+        todo: plan:
+        1) get simple pytorch code working w/o this
+        2) compute these and try to update W
+        3) try changing update rule to a learnable one modify to work w/ pytorch
         """
 
         # -- compute error
@@ -154,7 +162,7 @@ class Train:
         """
         train_loss = 0
         for idx in range(self.batch_n):
-            # -- training data
+            # -- training data # todo: 1) use this for a pytorch network, 2) sub w/ Omniglot (swap w/ 'Myload_data')
             y0 = self.X_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]/256
             y_target = self.y_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]
 
