@@ -16,7 +16,7 @@ from torchvision import datasets, transforms
 np.random.seed(0)
 
 
-def load_data(n_train):  # todo: swap w/ 'Myload_data'
+def load_data(n_train):  # todo: switch to Omniglot
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
     x_train = np.reshape(x_train[:n_train, :, :], (n_train, 784)).T
@@ -44,39 +44,21 @@ def Myload_data(data, tasks=5, steps=5, iid=True):
     return img_trn, lbl_trn, img_tst, lbl_tst
 
 
-class Linear:  # todo: remove
-    def __init__(self, input_size, output_size):
-        w = 1. / np.sqrt(input_size)
-        self.weight = np.random.uniform(-w, w, (output_size, input_size))
-
-    def __call__(self, x):
-        return np.matmul(self.weight, x)
-
-
-class Model:
-    def __init__(self):  # todo: remove
-        self.h_1 = Linear(784, 512)
-        self.h_2 = Linear(512, 256)
-        self.h_3 = Linear(256, 128)
-        self.h_4 = Linear(128, 1)
+class Model:  # todo: merge with MyModel
 
     @property
     def get_layers(self):  # fixme: might need
         return {1: self.h_1, 2: self.h_2, 3: self.h_3, 4: self.h_4}
 
     @property
-    def feedback_matrix(self):   # fixme: keep
+    def feedback_matrix(self):  # fixme: keep
 
         # todo: define B as network parameter
         feed_mat = {}
-        for i in range(1, len(self.get_layers)):  # todo: find a better way to get an iterator over network weights
+        for i in range(1, len(self.get_layers)):  # todo: find a better way to get an iterator over network params
             feed_mat[i] = self.get_layers[i+1].weight.T  # todo: may need to change init of B.
 
         return feed_mat
-
-    @staticmethod
-    def relu(x):  # todo: remove
-        return np.maximum(np.zeros(x.shape), x)
 
     def __call__(self, y0):
         y1 = self.relu(self.h_1(y0))
@@ -112,7 +94,7 @@ class Train:
     def __init__(self, x_train, y_train, args):
 
         # -- model params
-        self.model = MyModel()  # todo: remove (use self.model = MyModel())
+        self.model = MyModel()
 
         # self.B = self.model.feedback_matrix  # todo: redefine in MyModel
         # self.n_layers = len(self.model.get_layers)  # fixme
@@ -162,32 +144,6 @@ class Train:
         for i, key in enumerate(self.model.get_layers.keys()):
             self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
                                                 self.eta * np.matmul(self.e[i], y[i].T)
-
-    def train_epoch_(self, epoch):  # todo: remove
-        """
-            Single epoch training.
-        :param epoch: current epoch number.
-        """
-        train_loss = 0
-        for idx in range(self.batch_n):
-            # -- training data
-            y0 = self.X_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]/256
-            y_target = self.y_train[:, idx * self.batch_size:(idx + 1) * self.batch_size]
-
-            # -- predict
-            y = self.model(y0)
-
-            # -- weight update
-            self.weight_update(y, y_target)
-
-            # -- feedback update
-            self.feedback_update(y)
-
-            # -- compute loss
-            train_loss += 0.5 * np.matmul(self.e[-1], self.e[-1].T).item()
-
-        # -- log
-        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / self.N))
 
     def train_epoch(self, epoch):
         """
