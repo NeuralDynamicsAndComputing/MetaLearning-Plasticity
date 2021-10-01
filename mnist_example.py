@@ -83,6 +83,27 @@ class Model:
         return y0, y1, y2, y3, y4  # fixme: I might need this
 
 
+class MyModel(nn.Module):
+    def __init__(self):
+        super(MyModel, self).__init__()
+
+        # -- network parameters
+        self.fc1 = nn.Linear(784, 512, bias=False)  # todo: 784 -> 84*84
+        self.fc2 = nn.Linear(512, 264, bias=False)
+        self.fc3 = nn.Linear(264, 128, bias=False)
+        self.fc4 = nn.Linear(128, 1, bias=False)  # todo: 1 -> 5 or 963
+
+        self.relu = nn.ReLU()
+
+    def forward(self, y0):
+
+        y1 = self.relu(self.fc1(y0.squeeze(1).reshape(-1, 784)))  # todo: 784 -> 84*84
+        y2 = self.relu(self.fc2(y1))
+        y3 = self.relu(self.fc3(y2))
+
+        return self.relu(self.fc4(y3))
+
+
 class Train:
     def __init__(self, x_train, y_train, args):
 
