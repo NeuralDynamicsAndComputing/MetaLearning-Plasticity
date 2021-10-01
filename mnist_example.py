@@ -1,9 +1,13 @@
-import numpy as np
 import torch
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-from keras.datasets import mnist
 import argparse
+
+import numpy as np
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+from Dataset import OmniglotDataset
+from keras.datasets import mnist
 
 np.random.seed(0)
 
