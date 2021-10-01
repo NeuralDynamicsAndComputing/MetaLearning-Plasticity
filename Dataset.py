@@ -54,7 +54,7 @@ class OmniglotDataset(Dataset):
             img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
         img = torch.cat(img)
-        idx_vec = idx*torch.ones_like(torch.empty(20), dtype=int)
+        idx_vec = idx * torch.ones_like(torch.empty(20), dtype=int)
 
         return img[:self.steps], idx_vec[:self.steps], img[self.steps:self.steps+5], idx_vec[self.steps:self.steps+5]
 
@@ -78,20 +78,25 @@ def Myload_data(data, tasks=5, steps=5, iid=True):
     return img_trn, lbl_trn, img_tst, lbl_tst
 
 
-tasks = 5
-steps = 5
-iid = True
+def main():
+    tasks = 5
+    steps = 5
+    iid = True
 
-TrainDataset = DataLoader(dataset=OmniglotDataset(steps), batch_size=tasks, shuffle=True)
+    TrainDataset = DataLoader(dataset=OmniglotDataset(steps), batch_size=tasks, shuffle=True)
 
-for idx, data in enumerate(TrainDataset):
+    for idx, data in enumerate(TrainDataset):
 
-    img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
+        img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
 
-    for image, label in zip(img_trn, lbl_trn):
+        for image, label in zip(img_trn, lbl_trn):
 
-        print(label)
+            print(label)
 
-    print(lbl_tst)
+        print(lbl_tst)
 
-    quit()
+        quit()
+
+
+if __name__ == '__main__':
+    main()
