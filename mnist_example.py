@@ -4,35 +4,26 @@ import argparse
 
 import numpy as np
 
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
-from keras.datasets import mnist
 from torch import nn
 import torch.optim as optim
 from Dataset import OmniglotDataset
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
+from kymatio.torch import Scattering2D
+
+warnings.simplefilter(action='ignore', category=UserWarning)
 
 np.random.seed(0)
-
-
-def load_data(n_train):  # todo: switch to Omniglot
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
-    x_train = np.reshape(x_train[:n_train, :, :], (n_train, 784)).T
-    y_train = np.reshape(y_train[:n_train], (n_train, 1)).T
-
-    return x_train, y_train, x_test, y_test
 
 
 def Myload_data(data, tasks=5, steps=5, iid=True):
 
     img_trn, lbl_trn, img_tst, lbl_tst = data
 
-    img_tst = torch.reshape(img_tst, (tasks * 5,  84, 84))
-    lbl_tst = torch.reshape(lbl_tst, (1, tasks * 5))
+    img_tst = torch.reshape(img_tst, (tasks * 5,  28, 28))
+    lbl_tst = torch.reshape(lbl_tst, (tasks * 5, 1))
 
-    img_trn = torch.reshape(img_trn, (tasks * steps, 84, 84))
+    img_trn = torch.reshape(img_trn, (tasks * steps, 28, 28))
     lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
 
     if iid:
@@ -73,21 +64,24 @@ class MyModel(nn.Module):
     def __init__(self):
         super(MyModel, self).__init__()
 
+        # -- dim
+        self.in_dim = 1953
+
         # -- network parameters
-        self.fc1 = nn.Linear(784, 512, bias=False)  # todo: 784 -> 84*84
-        self.fc2 = nn.Linear(512, 264, bias=False)
-        self.fc3 = nn.Linear(264, 128, bias=False)
-        self.fc4 = nn.Linear(128, 1, bias=False)  # todo: 1 -> 5 or 963
+        self.fc1 = nn.Linear(self.in_dim, 512)  # , bias=False)
+        self.fc2 = nn.Linear(512, 264)  # , bias=False)
+        self.fc3 = nn.Linear(264, 128)  # , bias=False)
+        self.fc4 = nn.Linear(128, 964)  # , bias=False)
 
         self.relu = nn.ReLU()
 
     def forward(self, y0):
 
-        y1 = self.relu(self.fc1(y0.squeeze(1).reshape(-1, 784)))  # todo: 784 -> 84*84
-        y2 = self.relu(self.fc2(y1))
-        y3 = self.relu(self.fc3(y2))
+        y1 = self.relu(self.fc1(y0))
+        y2 = self.fc2(y1)
+        y3 = self.fc3(y2)
 
-        return self.relu(self.fc4(y3))
+        return self.fc4(y3)
 
 
 class Train:
@@ -95,6 +89,7 @@ class Train:
 
         # -- model params
         self.model = MyModel()
+        self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # self.B = self.model.feedback_matrix  # todo: redefine in MyModel
         # self.n_layers = len(self.model.get_layers)  # fixme
@@ -105,17 +100,12 @@ class Train:
         self.batch_size = args.batch_size  # todo: remove
         self.batch_n = -(-args.N//args.batch_size)  # todo: remove
 
-        # -- data params todo: swap w/ Omniglot dataloader
-        x_train, y_train, _, _ = load_data(args.N)  # todo: remove
-        self.X_train = x_train  # todo: remove
-        self.y_train = y_train  # todo: remove
-        mnist_trainset = datasets.MNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
-        self.TrainDataset = DataLoader(mnist_trainset, batch_size=self.batch_size, shuffle=False)  # fixme: pass dataset/dataloader from main?
-
-        self.TrainDataset_Omni = trainset
+        # -- data params
+        self.TrainDataset = trainset
 
         # -- optimization params
-        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-3)  # todo: switch this w/ costume update rule
+        self.loss_func = nn.MSELoss()
+        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-2)  # todo: switch this w/ costume update rule
 
     def feedback_update(self, y):  # fixme: use pytorch functions to update B matrix?
         """
@@ -159,17 +149,18 @@ class Train:
         for batch_idx, data in enumerate(self.TrainDataset):
 
             # -- training data # todo: swap w/ Omniglot dataloader and call to 'Myload_data'
-            img, label = data
+            img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
 
-            if batch_idx < 10:  # fixme
+            for image, label in zip(img_trn, lbl_trn):
+
+                # if batch_idx < 10:  # fixme
                 self.optimizer.zero_grad()
 
                 # -- predict
-                y4 = self.model(img)
+                y4 = self.model(self.scat(image).reshape(1, -1))
 
                 # -- compute loss
-                e = y4 - label.unsqueeze(1)
-                loss = 0.5 * e.T @ e
+                loss = self.loss_func(y4, label.to(torch.float32))
 
                 # -- weight update todo: 1) compute W updates w/ error and feedback, 2) switch to a costume update rule
                 loss.backward()
@@ -211,7 +202,7 @@ def main():
     args = parse_args()
 
     # -- load data
-    train_dataset = DataLoader(dataset=OmniglotDataset(args.steps), batch_size=args.tasks, shuffle=True)
+    train_dataset = DataLoader(dataset=OmniglotDataset(args.steps), batch_size=args.tasks, shuffle=True, drop_last=True)
 
     # -- train model
     my_train = Train(train_dataset, args)

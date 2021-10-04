@@ -34,7 +34,7 @@ class OmniglotDataset(Dataset):
 
         # --
         self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders]
-        self.transform = transforms.Compose([transforms.Resize((84, 84)), transforms.ToTensor()])
+        self.transform = transforms.Compose([transforms.Resize((28, 28)), transforms.ToTensor()])
 
     @staticmethod
     def download(url, filename):
@@ -63,10 +63,10 @@ def Myload_data(data, tasks=5, steps=5, iid=True):
 
     img_trn, lbl_trn, img_tst, lbl_tst = data
 
-    img_tst = torch.reshape(img_tst, (tasks * 5,  84, 84))
+    img_tst = torch.reshape(img_tst, (tasks * 5,  28, 28))
     lbl_tst = torch.reshape(lbl_tst, (1, tasks * 5))
 
-    img_trn = torch.reshape(img_trn, (tasks * steps, 84, 84))
+    img_trn = torch.reshape(img_trn, (tasks * steps, 28, 28))
     lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
 
     if iid:
@@ -90,6 +90,8 @@ def main():
         img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
 
         for image, label in zip(img_trn, lbl_trn):
+
+            print(img_trn[0])
 
             print(label)
 
