@@ -8,7 +8,6 @@ from torch import nn
 import torch.optim as optim
 from Dataset import OmniglotDataset
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
 from kymatio.torch import Scattering2D
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -65,7 +64,7 @@ class MyModel(nn.Module):
         super(MyModel, self).__init__()
 
         # -- dim
-        self.in_dim = 1953
+        self.in_dim = 784
 
         # -- network parameters
         self.fc1 = nn.Linear(self.in_dim, 512)  # , bias=False)
@@ -95,7 +94,6 @@ class Train:
         # self.n_layers = len(self.model.get_layers)  # fixme
 
         # -- training params
-        self.eta = args.eta
         self.epochs = args.epochs
         self.batch_size = args.batch_size  # todo: remove
         self.batch_n = -(-args.N//args.batch_size)  # todo: remove
@@ -104,8 +102,10 @@ class Train:
         self.TrainDataset = trainset
 
         # -- optimization params
-        self.loss_func = nn.MSELoss()
-        self.optimizer = optim.SGD(self.model.parameters(), lr=1e-2)  # todo: switch this w/ costume update rule
+        self.lr_adpt = args.lr_adpt
+        self.lr_updt = args.lr_updt
+        self.loss_func = nn.CrossEntropyLoss()
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr_updt)  # todo: pass only meta-params
 
     def feedback_update(self, y):  # fixme: use pytorch functions to update B matrix?
         """
@@ -114,7 +114,7 @@ class Train:
         :return:
         """
         for i in range(1, self.n_layers):
-            self.B[i] -= self.eta * np.matmul(self.e[i], y[i].T).T
+            self.B[i] -= self.lr_updt * np.matmul(self.e[i], y[i].T).T
 
     def weight_update(self, y, y_target):
         """
@@ -136,7 +136,21 @@ class Train:
         # -- weight update
         for i, key in enumerate(self.model.get_layers.keys()):
             self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
-                                                self.eta * np.matmul(self.e[i], y[i].T)
+                                                self.lr_adpt * np.matmul(self.e[i], y[i].T)
+
+    def adapt(self, image, y):
+
+        logits = self.model(image.reshape(1, -1))
+        loss = self.loss_func(logits, y)
+
+        # self.model.zero_grad() # todo: remove inner loop params from "optim.Adam"  # do I need it though? I'm not using param.grad.
+
+        grad = torch.autograd.grad(loss, self.model.parameters(), create_graph=True)
+
+        with torch.no_grad():
+            for idx, param in enumerate(self.model.parameters()):
+                new_param = param - self.lr_adpt * grad[idx]
+                param.copy_(new_param)
 
     def train_epoch(self, epoch):
         """
@@ -151,27 +165,28 @@ class Train:
             # -- training data # todo: swap w/ Omniglot dataloader and call to 'Myload_data'
             img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
 
+            """ inner-loop adaptation """
             for image, label in zip(img_trn, lbl_trn):
+                self.adapt(image, label)
 
-                # if batch_idx < 10:  # fixme
-                self.optimizer.zero_grad()
+            """ meta update """
+            # -- predict
+            y4 = self.model(img_tst.reshape(25, -1))  # self.model(self.scat(image).reshape(1, -1))
 
-                # -- predict
-                y4 = self.model(self.scat(image).reshape(1, -1))
+            # -- compute loss
+            loss = self.loss_func(y4, lbl_tst.reshape(-1))
 
-                # -- compute loss
-                loss = self.loss_func(y4, label.to(torch.float32))
+            #-- weight update todo: 1) compute W updates w/ error and feedback, 2) switch to a costume update rule
+            self.optimizer.zero_grad()
+            loss.backward()
+            train_loss += loss.item()
+            self.optimizer.step()
 
-                # -- weight update todo: 1) compute W updates w/ error and feedback, 2) switch to a costume update rule
-                loss.backward()
-                train_loss += loss.item()
-                self.optimizer.step()
-
-                # -- feedback update
-                # todo: 1) define feedback and its update rule 2) meta learn feedback
+            # -- feedback update
+            # todo: 1) define feedback and its update rule 2) meta learn feedback
 
         # -- log
-        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / 200))
+        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / 200)) # fixme: data size: 200 -> ??
 
     def __call__(self):
         """
@@ -186,14 +201,15 @@ def parse_args():
     parser = argparse.ArgumentParser(description=desc)
 
     # -- training params
-    parser.add_argument('--epochs', type=int, default=100, help='The number of epochs to run.')
-    parser.add_argument('--batch_size', type=int, default=10, help='The size of each batch.')
-    parser.add_argument('--N', type=int, default=200, help='Number of training data.')
-    parser.add_argument('--eta', type=float, default=1e-3, help='Learning rate.')
+    parser.add_argument('--epochs', type=int, default=3000, help='The number of epochs to run.')
+    parser.add_argument('--batch_size', type=int, default=10, help='The size of each batch.')  # fixme
+    parser.add_argument('--N', type=int, default=200, help='Number of training data.')  # fixme
 
     # -- meta-training params
-    parser.add_argument('--steps', type=int, default=5, help='')  # fixme: add definition
-    parser.add_argument('--tasks', type=int, default=5, help='')  # fixme: add definition
+    parser.add_argument('--steps', type=int, default=5, help='.')  # fixme: add definition
+    parser.add_argument('--tasks', type=int, default=5, help='.')  # fixme: add definition
+    parser.add_argument('--lr_adpt', type=float, default=1e-3, help='.')
+    parser.add_argument('--lr_updt', type=float, default=1e-3, help='.')
 
     return parser.parse_args()
 
