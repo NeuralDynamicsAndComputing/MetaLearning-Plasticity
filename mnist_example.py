@@ -94,10 +94,10 @@ class Train:
         self.TrainDataset = trainset
 
         # -- optimization params
-        self.lr_adpt = args.lr_adpt
-        self.lr_updt = args.lr_updt
+        self.lr_innr = args.lr_innr
+        self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr_updt)  # todo: pass only meta-params
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta-params
 
     def feedback_update(self, y):  # fixme: use pytorch functions to update B matrix?
         """
@@ -106,7 +106,7 @@ class Train:
         :return:
         """
         for i in range(1, self.n_layers):
-            self.B[i] -= self.lr_updt * np.matmul(self.e[i], y[i].T).T
+            self.B[i] -= self.lr_meta * np.matmul(self.e[i], y[i].T).T
 
     def weight_update(self, y, y_target):
         """
@@ -128,20 +128,18 @@ class Train:
         # -- weight update
         for i, key in enumerate(self.model.get_layers.keys()):
             self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
-                                                self.lr_adpt * np.matmul(self.e[i], y[i].T)
+                                                self.lr_innr * np.matmul(self.e[i], y[i].T)
 
-    def adapt(self, image, y):
+    def inner_update(self, image, y):
 
         logits = self.model(image.reshape(1, -1))
         loss = self.loss_func(logits, y)
-
-        # self.model.zero_grad() # todo: remove inner loop params from "optim.Adam"  # do I need it though? I'm not using param.grad.
 
         grad = torch.autograd.grad(loss, self.model.parameters(), create_graph=True)
 
         with torch.no_grad():
             for idx, param in enumerate(self.model.parameters()):
-                new_param = param - self.lr_adpt * grad[idx]
+                new_param = param - self.lr_innr * grad[idx]
                 param.copy_(new_param)
 
     def train_epoch(self, epoch):
@@ -157,9 +155,9 @@ class Train:
             # -- training data # todo: swap w/ Omniglot dataloader and call to 'Myload_data'
             img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
 
-            """ inner-loop adaptation """
+            """ inner update """
             for image, label in zip(img_trn, lbl_trn):
-                self.adapt(image, label)
+                self.inner_update(image, label)
 
             """ meta update """
             # -- predict
@@ -200,8 +198,8 @@ def parse_args():
     # -- meta-training params
     parser.add_argument('--steps', type=int, default=5, help='.')  # fixme: add definition
     parser.add_argument('--tasks', type=int, default=5, help='.')  # fixme: add definition
-    parser.add_argument('--lr_adpt', type=float, default=1e-3, help='.')
-    parser.add_argument('--lr_updt', type=float, default=1e-3, help='.')
+    parser.add_argument('--lr_innr', type=float, default=1e-3, help='.')
+    parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
 
     return parser.parse_args()
 
