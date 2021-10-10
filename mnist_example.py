@@ -50,14 +50,6 @@ class Model:  # todo: merge with MyModel
 
         return feed_mat
 
-    def __call__(self, y0):
-        y1 = self.relu(self.h_1(y0))
-        y2 = self.relu(self.h_2(y1))
-        y3 = self.relu(self.h_3(y2))
-        y4 = self.relu(self.h_4(y3))
-
-        return y0, y1, y2, y3, y4  # fixme: might need
-
 
 class MyModel(nn.Module):
     def __init__(self):
