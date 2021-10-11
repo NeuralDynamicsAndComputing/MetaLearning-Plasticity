@@ -26,6 +26,15 @@ class MyModel(nn.Module):
             nn.Parameter(torch.randn(84, 10))
         ])
 
+        self.feed_fwd_params_list = nn.ParameterList([
+            self.cl1.weight,
+            self.cl1.bias,
+            self.cl2.weight,
+            self.cl2.bias,
+            self.fc1.weight,
+            self.fc1.bias
+        ])
+
 
         #
         # self.feed_back_params_dict = nn.ParameterDict({
@@ -56,14 +65,14 @@ def main():
 
     # -- model
     model = MyModel()
-    SGD = False
+    SGD = True
     # model.fc1.register_forward_hook(get_activation('fc1'))
     # optim_meta = optim.Adam(model.feed_back_params, lr=1e-3)  # todo: pass only meta-params
     # optim_meta = optim.SGD(model.feed_back_params_list, lr=1e-3)  # todo: pass only meta-params
     if SGD:
         optimizer = optim.SGD(model.parameters(), lr=1e-3)  # todo: pass only meta-params
     else:
-        optimizer = MyOptimizer(model.parameters(), lr=1e-3)  # todo: pass only meta-params
+        optimizer = MyOptimizer(model.feed_fwd_params_list, lr=1e-3)  # todo: pass only meta-params
     loss_func = nn.CrossEntropyLoss()
 
     # -- train

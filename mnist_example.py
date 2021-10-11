@@ -50,6 +50,28 @@ class MyModel(nn.Module):
 
         self.relu = nn.ReLU()
 
+        # -- set feedback and feedforward param lists
+        self.set_param_lists()
+
+    def set_param_lists(self):
+
+        self.feed_back_params_list = nn.ParameterList([
+            nn.Parameter(torch.randn(60, 25)),
+            nn.Parameter(torch.randn(84, 60)),
+            nn.Parameter(torch.randn(84, 10))
+        ])
+
+        self.feed_fwd_params_list = nn.ParameterList([
+            self.fc1.weight,
+            self.fc1.bias,
+            self.fc2.weight,
+            self.fc2.bias,
+            self.fc3.weight,
+            self.fc3.bias,
+            self.fc4.weight,
+            self.fc4.bias
+        ])
+
     def forward(self, y0):
 
         y1 = self.relu(self.fc1(y0))
@@ -174,6 +196,11 @@ class Train:
             for image, label in zip(img_trn, lbl_trn):
                 # -- predict
                 _, logits = self.model(image.reshape(1, -1))
+
+                if False:
+                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz',
+                                                                                              format='png')
+                    quit()
 
                 # -- compute loss
                 loss_innr = self.loss_func(logits, label)
