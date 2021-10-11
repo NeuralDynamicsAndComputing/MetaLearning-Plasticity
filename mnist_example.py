@@ -4,12 +4,11 @@ import argparse
 
 import numpy as np
 
-from torch import nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-from kymatio.torch import Scattering2D
-
+from torch import nn, optim
 from torchviz import make_dot
+from kymatio.torch import Scattering2D
+from torch.utils.data import DataLoader
+
 from Dataset import OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -187,7 +186,7 @@ class Train:
             # todo: 1) define feedback and its update rule 2) meta learn feedback
 
         # -- log
-        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / 200)) # fixme: data size: 200 -> ??
+        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / 200))  # fixme: data size: 200 -> ??
 
     def __call__(self):
         """
