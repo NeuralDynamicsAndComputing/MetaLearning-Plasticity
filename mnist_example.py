@@ -74,7 +74,7 @@ class MyModel(nn.Module):
         y2 = self.fc2(y1)
         y3 = self.fc3(y2)
 
-        return self.fc4(y3)
+        return (y1, y2, y3), self.fc4(y3)
 
 
 class Train:
@@ -164,10 +164,10 @@ class Train:
 
             """ meta update """
             # -- predict
-            y4 = self.model(img_tst.reshape(25, -1))  # self.model(self.scat(image).reshape(1, -1))
+            _, logits = self.model(img_tst.reshape(25, -1))  # self.model(self.scat(image).reshape(1, -1))
 
             # -- compute loss
-            loss = self.loss_func(y4, lbl_tst.reshape(-1))
+            loss = self.loss_func(logits, lbl_tst.reshape(-1))
 
             #-- weight update todo: 1) compute W updates w/ error and feedback, 2) switch to a costume update rule
             self.optimizer.zero_grad()
