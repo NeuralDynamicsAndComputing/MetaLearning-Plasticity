@@ -10,6 +10,8 @@ from Dataset import OmniglotDataset
 from torch.utils.data import DataLoader
 from kymatio.torch import Scattering2D
 
+from torchviz import make_dot
+
 warnings.simplefilter(action='ignore', category=UserWarning)
 
 np.random.seed(0)
@@ -129,6 +131,9 @@ class Train:
                                                 self.lr_innr * np.matmul(self.e[i], y[i].T)
 
     def inner_update(self, image, y):
+        if False:
+            make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
+            quit()
 
         logits = self.model(image.reshape(1, -1))
         loss = self.loss_func(logits, y)
