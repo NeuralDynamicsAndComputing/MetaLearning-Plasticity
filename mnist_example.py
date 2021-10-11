@@ -87,8 +87,6 @@ class Train:
 
         # -- training params
         self.epochs = args.epochs
-        self.batch_size = args.batch_size  # todo: remove
-        self.batch_n = -(-args.N//args.batch_size)  # todo: remove
 
         # -- data params
         self.TrainDataset = trainset
@@ -192,7 +190,6 @@ def parse_args():
 
     # -- training params
     parser.add_argument('--epochs', type=int, default=3000, help='The number of epochs to run.')
-    parser.add_argument('--batch_size', type=int, default=10, help='The size of each batch.')  # fixme
     parser.add_argument('--N', type=int, default=200, help='Number of training data.')  # fixme
 
     # -- meta-training params
