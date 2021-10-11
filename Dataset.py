@@ -59,13 +59,12 @@ class OmniglotDataset(Dataset):
         return img[:self.steps], idx_vec[:self.steps], img[self.steps:self.steps+5], idx_vec[self.steps:self.steps+5]
 
 
-def Myload_data(data, tasks=5, steps=5, iid=True):
+def process_data(data, tasks=5, steps=5, iid=True):
 
     img_trn, lbl_trn, img_tst, lbl_tst = data
 
     img_tst = torch.reshape(img_tst, (tasks * 5,  28, 28))
-    lbl_tst = torch.reshape(lbl_tst, (1, tasks * 5))
-
+    lbl_tst = torch.reshape(lbl_tst, (tasks * 5, 1))
     img_trn = torch.reshape(img_trn, (tasks * steps, 28, 28))
     lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
 
@@ -79,6 +78,7 @@ def Myload_data(data, tasks=5, steps=5, iid=True):
 
 
 def main():
+    # TODO: remove
     tasks = 5
     steps = 5
     iid = True
@@ -87,7 +87,7 @@ def main():
 
     for idx, data in enumerate(TrainDataset):
 
-        img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
+        img_trn, lbl_trn, img_tst, lbl_tst = process_data(data)
 
         for image, label in zip(img_trn, lbl_trn):
 
@@ -101,4 +101,5 @@ def main():
 
 
 if __name__ == '__main__':
+    # TODO: remove
     main()
