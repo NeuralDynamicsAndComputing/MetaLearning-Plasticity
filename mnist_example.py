@@ -15,6 +15,7 @@ from Dataset import OmniglotDataset, process_data
 warnings.simplefilter(action='ignore', category=UserWarning)
 
 np.random.seed(0)
+torch.manual_seed(0)
 
 
 class Model:  # todo: merge with MyModel
@@ -94,6 +95,7 @@ class Train:
             self.B[i] # todo: get model params
 
     def inner_update_(self, image, target):
+        # TODO: remove
         """
             inner update rule.
         :param image: input
@@ -126,6 +128,7 @@ class Train:
         #                                         self.lr_innr * np.matmul(self.e[i], y[i].T)
 
     def inner_update(self, image, target):
+        # TODO: remove
         """
             inner update rule.
         :param image: input
@@ -138,7 +141,7 @@ class Train:
 
         y, logits = self.model(image.reshape(1, -1))
 
-        if False:
+        if True:
             make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
             quit()
 
