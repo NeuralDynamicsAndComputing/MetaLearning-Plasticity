@@ -6,34 +6,15 @@ import numpy as np
 
 from torch import nn
 import torch.optim as optim
-from Dataset import OmniglotDataset
 from torch.utils.data import DataLoader
 from kymatio.torch import Scattering2D
 
 from torchviz import make_dot
+from Dataset import OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
 np.random.seed(0)
-
-
-def Myload_data(data, tasks=5, steps=5, iid=True):
-
-    img_trn, lbl_trn, img_tst, lbl_tst = data
-
-    img_tst = torch.reshape(img_tst, (tasks * 5,  28, 28))
-    lbl_tst = torch.reshape(lbl_tst, (tasks * 5, 1))
-
-    img_trn = torch.reshape(img_trn, (tasks * steps, 28, 28))
-    lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
-
-    if iid:
-        perm = np.random.choice(range(tasks * steps), tasks * steps, False)
-
-        img_trn = img_trn[perm]
-        lbl_trn = lbl_trn[perm]
-
-    return img_trn, lbl_trn, img_tst, lbl_tst
 
 
 class Model:  # todo: merge with MyModel
@@ -182,8 +163,8 @@ class Train:
 
         for batch_idx, data in enumerate(self.TrainDataset):  # fixme: this way each X is only observed once.
 
-            # -- training data # todo: swap w/ Omniglot dataloader and call to 'Myload_data'
-            img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
+            # -- training data
+            img_trn, lbl_trn, img_tst, lbl_tst = process_data(data)
 
             """ inner update """
             for image, label in zip(img_trn, lbl_trn):
