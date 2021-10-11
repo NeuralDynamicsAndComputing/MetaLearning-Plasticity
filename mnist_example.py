@@ -144,6 +144,9 @@ class Train:
             for idx, param in enumerate(self.model.parameters()):
                 new_param = param - self.lr_innr * grad[idx]
                 param.copy_(new_param)
+        # for idx, param in enumerate(self.model.parameters()):
+        #     if idx == 0:
+        #         print(param)
 
     def train_epoch(self, epoch):
         """
@@ -153,7 +156,7 @@ class Train:
         self.model.train()
         train_loss = 0
 
-        for batch_idx, data in enumerate(self.TrainDataset):
+        for batch_idx, data in enumerate(self.TrainDataset):  # fixme: this way each X is only observed once.
 
             # -- training data # todo: swap w/ Omniglot dataloader and call to 'Myload_data'
             img_trn, lbl_trn, img_tst, lbl_tst = Myload_data(data)
