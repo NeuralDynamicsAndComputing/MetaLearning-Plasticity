@@ -33,7 +33,7 @@ class OmniglotDataset(Dataset):
         self.steps = steps
 
         # --
-        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders]
+        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders][:100]
         self.transform = transforms.Compose([transforms.Resize((28, 28)), transforms.ToTensor()])
 
     @staticmethod

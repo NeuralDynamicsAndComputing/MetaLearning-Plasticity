@@ -71,8 +71,8 @@ class MyModel(nn.Module):
     def forward(self, y0):
 
         y1 = self.relu(self.fc1(y0))
-        y2 = self.fc2(y1)
-        y3 = self.fc3(y2)
+        y2 = self.relu(self.fc2(y1))
+        y3 = self.relu(self.fc3(y2))
 
         return (y1, y2, y3), self.fc4(y3)
 
@@ -83,6 +83,8 @@ class Train:
         # -- model params
         self.model = MyModel()
         self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
+        self.softmax = nn.Softmax(dim=1)
+        self.n_layers = 4
 
         # self.B = self.model.feedback_matrix  # todo: redefine in MyModel
         # self.n_layers = len(self.model.get_layers)  # fixme
@@ -99,44 +101,66 @@ class Train:
         self.loss_func = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta-params
 
-    def feedback_update(self, y):  # fixme: use pytorch functions to update B matrix?
+    def feedback_update(self, y):
         """
             updates feedback matrix B.
         :param y: input, activations, and prediction
         :return:
         """
         for i in range(1, self.n_layers):
-            self.B[i] -= self.lr_meta * np.matmul(self.e[i], y[i].T).T
+            # self.B[i] -= self.lr_meta * np.matmul(self.e[i], y[i].T).T
+            self.B[i] # todo: get model params
 
-    def weight_update(self, y, y_target):
+    def inner_update_(self, image, target):
         """
-            Weight update rule.
-        :param y: input, activations, and prediction
-        :param y_target: target label
+            inner update rule.
+        :param image: input
+        :param target: target label
 
         todo: plan:
-        1) get simple pytorch code working w/o this
         2) compute these and try to update W
         3) try changing update rule to a learnable one modify to work w/ pytorch
         """
 
-        # -- compute error
-        self.e = [y[-1] - y_target]
+        image = image.reshape(1, -1)
+        y, logits = self.model(image)
+        loss = self.loss_func(logits, target)
+
+        grad = torch.autograd.grad(loss, self.model.parameters(), create_graph=True)
+
+        with torch.no_grad():
+            for idx, param in enumerate(self.model.parameters()):
+                new_param = param - self.lr_innr * grad[idx]
+                param.copy_(new_param)
+
+        # -- compute error todo: would computations stand in the case of logit outputs?
+        e = [self.softmax(logits) - target]
         for i in range(self.n_layers, 1, -1):
-            self.e.insert(0, np.matmul(self.B[i-1], self.e[0]) * np.heaviside(y[i-1], 0.0))
+            e.insert(0, np.matmul(self.B[i-1], e[0]) * np.heaviside(y[i-2], 0.0))  # fixme : y[i-1] -> y[i-2]
 
-        # -- weight update
-        for i, key in enumerate(self.model.get_layers.keys()):
-            self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
-                                                self.lr_innr * np.matmul(self.e[i], y[i].T)
+        # # -- weight update
+        # for i, key in enumerate(self.model.get_layers.keys()):
+        #     self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
+        #                                         self.lr_innr * np.matmul(self.e[i], y[i].T)
 
-    def inner_update(self, image, y):
+    def inner_update(self, image, target):
+        """
+            inner update rule.
+        :param image: input
+        :param target: target label
+
+        todo: plan:
+        2) compute these and try to update W
+        3) try changing update rule to a learnable one modify to work w/ pytorch
+        """
+
+        y, logits = self.model(image.reshape(1, -1))
+
         if False:
             make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
             quit()
 
-        logits = self.model(image.reshape(1, -1))
-        loss = self.loss_func(logits, y)
+        loss = self.loss_func(logits, target)
 
         grad = torch.autograd.grad(loss, self.model.parameters(), create_graph=True)
 
