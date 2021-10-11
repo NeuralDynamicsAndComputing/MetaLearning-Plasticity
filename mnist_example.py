@@ -9,6 +9,7 @@ from torchviz import make_dot
 from kymatio.torch import Scattering2D
 from torch.utils.data import DataLoader
 
+from Optim_rule import MyOptimizer
 from Dataset import OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -79,7 +80,8 @@ class Train:
         self.lr_innr = args.lr_innr
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta-params
+        self.optim_meta = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta params
+        self.optim_innr = MyOptimizer(self.model.parameters(), lr=self.lr_innr)  # todo: pass only weight params
 
     def feedback_update(self, y):
         """
@@ -167,23 +169,29 @@ class Train:
 
             """ inner update """
             for image, label in zip(img_trn, lbl_trn):
-                self.inner_update(image, label)
+                # -- predict
+                _, logits = self.model(image.reshape(1, -1))
+
+                # -- compute loss
+                loss_innr = self.loss_func(logits, label)
+
+                # -- update params
+                # todo: 1) compute W updates w/ error and feedback, 2) custom update rule
+                self.optim_innr.step(loss_innr)
 
             """ meta update """
             # -- predict
             _, logits = self.model(img_tst.reshape(25, -1))  # self.model(self.scat(image).reshape(1, -1))
 
             # -- compute loss
-            loss = self.loss_func(logits, lbl_tst.reshape(-1))
+            loss_meta = self.loss_func(logits, lbl_tst.reshape(-1))
 
-            #-- weight update todo: 1) compute W updates w/ error and feedback, 2) switch to a costume update rule
-            self.optimizer.zero_grad()
-            loss.backward()
-            train_loss += loss.item()
-            self.optimizer.step()
-
-            # -- feedback update
+            # -- update params
             # todo: 1) define feedback and its update rule 2) meta learn feedback
+            self.optim_meta.zero_grad()
+            loss_meta.backward()
+            train_loss += loss_meta.item()
+            self.optim_meta.step()
 
         # -- log
         print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / 200))  # fixme: data size: 200 -> ??
