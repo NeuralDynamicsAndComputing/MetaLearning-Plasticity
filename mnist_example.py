@@ -104,7 +104,7 @@ class Train:
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
         self.optim_meta = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta params
-        self.optim_innr = MyOptimizer(self.model.parameters(), lr=self.lr_innr)  # todo: pass only weight params
+        self.optim_innr = MyOptimizer(self.model.feed_fwd_params_list, lr=self.lr_innr)  # todo: pass only weight params
 
     def feedback_update(self, y):
         """
@@ -195,7 +195,7 @@ class Train:
             """ inner update """
             for image, label in zip(img_trn, lbl_trn):
                 # -- predict
-                _, logits = self.model(image.reshape(1, -1))
+                y, logits = self.model(image.reshape(1, -1))
 
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz',
@@ -207,7 +207,7 @@ class Train:
 
                 # -- update params
                 # todo: 1) compute W updates w/ error and feedback, 2) custom update rule
-                self.optim_innr.step(loss_innr)
+                self.optim_innr.step(loss_innr, y, logits)
 
             """ meta update """
             # -- predict
