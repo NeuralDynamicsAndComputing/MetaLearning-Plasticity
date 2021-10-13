@@ -18,23 +18,6 @@ np.random.seed(0)
 torch.manual_seed(0)
 
 
-class Model:  # todo: merge with MyModel
-
-    @property
-    def get_layers(self):  # fixme: might need
-        return {1: self.h_1, 2: self.h_2, 3: self.h_3, 4: self.h_4}
-
-    @property
-    def feedback_matrix(self):  # fixme: keep
-
-        # todo: define B as network parameter
-        feed_mat = {}
-        for i in range(1, len(self.get_layers)):  # todo: find a better way to get an iterator over network params
-            feed_mat[i] = self.get_layers[i+1].weight.T  # todo: may need to change init of B.
-
-        return feed_mat
-
-
 class MyModel(nn.Module):
     def __init__(self):
         super(MyModel, self).__init__()
