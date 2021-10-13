@@ -3,4 +3,6 @@ Test_pytorch.py
 results/*
 .DS_Store
 .idea/*
-__pycache__/* 
+__pycache__/*
+*png
+model_torchviz
