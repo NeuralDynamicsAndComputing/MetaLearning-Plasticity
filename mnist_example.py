@@ -55,12 +55,6 @@ class MyModel(nn.Module):
 
     def set_param_lists(self):
 
-        self.feed_back_params_list = nn.ParameterList([
-            nn.Parameter(torch.randn(60, 25)),
-            nn.Parameter(torch.randn(84, 60)),
-            nn.Parameter(torch.randn(84, 10))
-        ])
-
         self.feed_fwd_params_list = nn.ParameterList([
             self.fc1.weight,
             self.fc1.bias,
@@ -70,6 +64,12 @@ class MyModel(nn.Module):
             self.fc3.bias,
             self.fc4.weight,
             self.fc4.bias
+        ])
+
+        self.feed_bck_params_list = nn.ParameterList([
+            nn.Parameter(self.fc2.weight.detach().clone().T),
+            nn.Parameter(self.fc3.weight.detach().clone().T),
+            nn.Parameter(self.fc4.weight.detach().clone().T)
         ])
 
     def forward(self, y0):
@@ -104,7 +104,7 @@ class Train:
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
         self.optim_meta = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta params
-        self.optim_innr = MyOptimizer(self.model.parameters(), lr=self.lr_innr)  # todo: pass only weight params
+        self.optim_innr = MyOptimizer(self.model.feed_fwd_params_list, lr=self.lr_innr)  # todo: pass only weight params
 
     def feedback_update(self, y):
         """
@@ -114,7 +114,7 @@ class Train:
         """
         for i in range(1, self.n_layers):
             # self.B[i] -= self.lr_meta * np.matmul(self.e[i], y[i].T).T
-            self.B[i] # todo: get model params
+            self.B[i]  # todo: get model params
 
     def inner_update_(self, image, target):
         # TODO: remove
@@ -163,10 +163,6 @@ class Train:
 
         y, logits = self.model(image.reshape(1, -1))
 
-        if True:
-            make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
-            quit()
-
         loss = self.loss_func(logits, target)
 
         grad = torch.autograd.grad(loss, self.model.parameters(), create_graph=True)
@@ -175,9 +171,6 @@ class Train:
             for idx, param in enumerate(self.model.parameters()):
                 new_param = param - self.lr_innr * grad[idx]
                 param.copy_(new_param)
-        # for idx, param in enumerate(self.model.parameters()):
-        #     if idx == 0:
-        #         print(param)
 
     def train_epoch(self, epoch):
         """
@@ -195,7 +188,7 @@ class Train:
             """ inner update """
             for image, label in zip(img_trn, lbl_trn):
                 # -- predict
-                _, logits = self.model(image.reshape(1, -1))
+                y, logits = self.model(image.reshape(1, -1))
 
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz',
@@ -207,7 +200,7 @@ class Train:
 
                 # -- update params
                 # todo: 1) compute W updates w/ error and feedback, 2) custom update rule
-                self.optim_innr.step(loss_innr)
+                self.optim_innr.step(loss_innr, y, logits, self.model.feed_bck_params_list)
 
             """ meta update """
             # -- predict
