@@ -61,7 +61,7 @@ class MyModel(nn.Module):
         y2 = self.relu(self.fc2(y1))
         y3 = self.relu(self.fc3(y2))
 
-        return (y1, y2, y3), self.fc4(y3)
+        return (y0, y1, y2, y3), self.fc4(y3)
 
 
 class Train:
@@ -71,10 +71,7 @@ class Train:
         self.model = MyModel()
         self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
         self.softmax = nn.Softmax(dim=1)
-        self.n_layers = 4
-
-        # self.B = self.model.feedback_matrix  # todo: redefine in MyModel
-        # self.n_layers = len(self.model.get_layers)  # fixme
+        self.n_layers = 4  # fixme
 
         # -- training params
         self.epochs = args.epochs
@@ -87,7 +84,7 @@ class Train:
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
         self.optim_meta = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta params
-        self.optim_innr = MyOptimizer(self.model.feed_fwd_params_list, lr=self.lr_innr)  # todo: pass only weight params
+        self.optim_innr = MyOptimizer(self.model.feed_fwd_params_list, lr=self.lr_innr)
 
     def feedback_update(self, y):
         """
@@ -183,7 +180,7 @@ class Train:
 
                 # -- update params
                 # todo: 1) compute W updates w/ error and feedback, 2) custom update rule
-                self.optim_innr.step(loss_innr, image, y, logits, self.model.feed_bck_params_list) # todo: use that register thing (!) to call from opt func w/o passing all these info.
+                # self.optim_innr.step(loss_innr, y, logits, self.model.feed_bck_params_list) # todo: use that register thing (!) to call from opt func w/o passing all these info.
 
             """ meta update """
             # -- predict
