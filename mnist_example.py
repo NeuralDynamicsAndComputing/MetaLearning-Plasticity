@@ -171,11 +171,11 @@ class Train:
             """ inner update """
             for image, label in zip(img_trn, lbl_trn):
                 # -- predict
-                y, logits = self.model(image.reshape(1, -1))
+                image = image.reshape(1, -1)
+                y, logits = self.model(image)
 
                 if False:
-                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz',
-                                                                                              format='png')
+                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
                     quit()
 
                 # -- compute loss
@@ -183,7 +183,7 @@ class Train:
 
                 # -- update params
                 # todo: 1) compute W updates w/ error and feedback, 2) custom update rule
-                self.optim_innr.step(loss_innr, y, logits, self.model.feed_bck_params_list)
+                self.optim_innr.step(loss_innr, image, y, logits, self.model.feed_bck_params_list) # todo: use that register thing (!) to call from opt func w/o passing all these info.
 
             """ meta update """
             # -- predict

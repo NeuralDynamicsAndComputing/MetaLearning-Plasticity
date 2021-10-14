@@ -9,7 +9,7 @@ class MyOptimizer(optim.Optimizer):
         defaults = dict(lr=lr)
         super(MyOptimizer, self).__init__(params, defaults)
 
-    def step(self, loss, y, logits, B):  # todo: -> (self, loss, activations, logits, feedbacks)
+    def step(self, loss, input, activations, logits, feedbacks):
         """
             Weight update rule.
         :param loss: loss value
@@ -18,42 +18,41 @@ class MyOptimizer(optim.Optimizer):
         :return:
         """
 
+        n_layers = 4
 
-        # n_layers = 4
-        #
-        # # -- compute error
-        # e = []
-        # e_L = torch.autograd.grad(loss, logits, create_graph=True)[0]
-        #
-        # e.append(e_L)
-        # print(e[0].shape)
-        #
-        #
-        # for i in range(n_layers, 1, -1):
-        #     # todo: -> for y, B in zip(activations, feedbacks):
-        #     # e.insert(0, torch.matmul(B[i - 2], e[0][0].T) * torch.heaviside(y[i - 2], torch.tensor(0.0)))
-        #
-        #     print("B : {}".format(B[i - 2].shape))
-        #
-        #     # print(e[0].shape)
-        #
-        # quit()
-        #
-        #
-        #     # todo: -> e.insert(0, torch.matmul(B, e[0]) * torch.heaviside(y, 0.0))
-        #
-        #     # todo: check if np.matmul and torch.matmul are the same
-        #     # todo: check if np.heaviside and torch.heaviside are the same
-        #
-        #
-        #
-        #
-        # for err in e:
-        #
-        #
-        #
-        #     print(type(err))
-        # quit()
+        # -- compute error
+        e = []
+        e_L = torch.autograd.grad(loss, logits, create_graph=True)[0]
+        e.append(e_L)
+
+        for i in range(n_layers - 2, -1, -1):  # todo: -> for y, B in zip(reversed(activations), reversed(feedbacks)):
+            e.insert(0, torch.matmul(e[0], feedbacks[i].T) * torch.heaviside(activations[i], torch.tensor(0.0)))
+
+            # todo: check if np.matmul and torch.matmul are the same
+            # todo: check if np.heaviside and torch.heaviside are the same
+
+        
+
+        for group in self.param_groups:
+
+            idx = 0
+            for i, p in enumerate(group['params']):
+
+                with torch.no_grad():
+
+                    print(p.shape)
+
+                    print(idx)
+
+
+                    # todo: -> self.model.get_layers[key].weight.add_(torch.matmul(e[i], y[i].T), alpha=-group['lr'])
+
+                    if len(p.shape) == 1:
+                        idx += 1
+
+
+            quit()
+
 
         # -- weight update
         # for group in self.param_groups:
@@ -67,8 +66,6 @@ class MyOptimizer(optim.Optimizer):
         #     for idx, p in enumerate(group['params']):
         #
         #         with torch.no_grad():
-        #
-        #
         #             p.add_(grad[idx], alpha=-group['lr'])
         #
         #             # todo: -> self.model.get_layers[key].weight.add_(torch.matmul(e[i], y[i].T), alpha=-group['lr'])
@@ -77,35 +74,12 @@ class MyOptimizer(optim.Optimizer):
         """ backprop equivalent procedure """
         # for group in self.param_groups:
         #
-        #     # -- compute error
-        #     e = []
-        #     e_L = torch.autograd.grad(loss, logits, create_graph=True)
-        #     e.append(e_L)
-        #
-        #     for i in range(n_layers, 1, -1):
-        #         self.e.insert(0, torch.matmul(self.B[i - 1], self.e[0]) * torch.heaviside(y[i - 1], 0.0))
-        #
-        #     # todo: check if np.matmul and torch.matmul are the same
-        #     # todo: check if np.heaviside and torch.heaviside are the same
-        #     #
         #
         #     # -- weight update
         #     for i, key in enumerate(self.model.get_layers.keys()):
         #         self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
         #                                             self.eta * np.matmul(self.e[i], y[i].T)
         #
-        #     quit()
-        #
-        # def feedback_matrix(self):
-        #     feed_mat = {}
-        #     for i in range(1, len(self.get_layers)):
-        #         feed_mat[i] = self.get_layers[i + 1].weight.T
-        #
-        #     return feed_mat
-        #
-        #
-        #     # self.e = [y[-1] - y_target]
-
 
         """ SGD """
         for group in self.param_groups:
