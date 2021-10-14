@@ -96,62 +96,6 @@ class Train:
             # self.B[i] -= self.lr_meta * np.matmul(self.e[i], y[i].T).T
             self.B[i]  # todo: get model params
 
-    def inner_update_(self, image, target):
-        # TODO: remove
-        """
-            inner update rule.
-        :param image: input
-        :param target: target label
-
-        todo: plan:
-        2) compute these and try to update W
-        3) try changing update rule to a learnable one modify to work w/ pytorch
-        """
-
-        image = image.reshape(1, -1)
-        y, logits = self.model(image)
-        loss = self.loss_func(logits, target)
-
-        grad = torch.autograd.grad(loss, self.model.parameters(), create_graph=True)
-
-        with torch.no_grad():
-            for idx, param in enumerate(self.model.parameters()):
-                new_param = param - self.lr_innr * grad[idx]
-                param.copy_(new_param)
-
-        # -- compute error todo: would computations stand in the case of logit outputs?
-        e = [self.softmax(logits) - target]
-        for i in range(self.n_layers, 1, -1):
-            e.insert(0, np.matmul(self.B[i-1], e[0]) * np.heaviside(y[i-2], 0.0))  # fixme : y[i-1] -> y[i-2]
-
-        # # -- weight update
-        # for i, key in enumerate(self.model.get_layers.keys()):
-        #     self.model.get_layers[key].weight = self.model.get_layers[key].weight - \
-        #                                         self.lr_innr * np.matmul(self.e[i], y[i].T)
-
-    def inner_update(self, image, target):
-        # TODO: remove
-        """
-            inner update rule.
-        :param image: input
-        :param target: target label
-
-        todo: plan:
-        2) compute these and try to update W
-        3) try changing update rule to a learnable one modify to work w/ pytorch
-        """
-
-        y, logits = self.model(image.reshape(1, -1))
-
-        loss = self.loss_func(logits, target)
-
-        grad = torch.autograd.grad(loss, self.model.parameters(), create_graph=True)
-
-        with torch.no_grad():
-            for idx, param in enumerate(self.model.parameters()):
-                new_param = param - self.lr_innr * grad[idx]
-                param.copy_(new_param)
-
     def train_epoch(self, epoch):
         """
             Single epoch training.
@@ -180,7 +124,7 @@ class Train:
 
                 # -- update params
                 # todo: 1) compute W updates w/ error and feedback, 2) custom update rule
-                # self.optim_innr.step(loss_innr, y, logits, self.model.feed_bck_params_list) # todo: use that register thing (!) to call from opt func w/o passing all these info.
+                self.optim_innr.step(loss_innr, y, logits, self.model.feed_bck_params_list) # todo: use that register thing (!) to call from opt func w/o passing all these info.
 
             """ meta update """
             # -- predict

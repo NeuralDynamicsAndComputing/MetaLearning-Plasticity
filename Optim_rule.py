@@ -42,6 +42,11 @@ class MyOptimizer(torch.optim.Optimizer):
                     else:
                         p.add_(torch.matmul(e[idx].T, y_tuple[idx]), alpha=-group['lr'])    # update weights
 
+        # with torch.no_grad():
+        #     for idx, param in enumerate(self.model.parameters()):
+        #         new_param = param - self.lr_innr * grad[idx]
+        #         param.copy_(new_param)
+
         # """ SGD """
         # for group in self.param_groups:
         #     grad = torch.autograd.grad(loss, group['params'], create_graph=True)
