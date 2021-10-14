@@ -83,7 +83,7 @@ class Train:
         self.lr_innr = args.lr_innr
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.optim_meta = optim.Adam(self.model.parameters(), lr=self.lr_meta)  # todo: pass only meta params
+        self.optim_meta = optim.Adam(self.model.feed_bck_params_list, lr=self.lr_meta)
         self.optim_innr = MyOptimizer(self.model.feed_fwd_params_list, lr=self.lr_innr)
 
     def feedback_update(self, y):
