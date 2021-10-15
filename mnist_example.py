@@ -78,6 +78,7 @@ class Train:
 
         # -- data params
         self.TrainDataset = trainset
+        self.N = args.N
 
         # -- optimization params
         self.lr_innr = args.lr_innr
@@ -141,7 +142,7 @@ class Train:
             self.optim_meta.step()
 
         # -- log
-        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / 200))  # fixme: data size: 200 -> ??
+        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / (self.N * 5)))
 
     def __call__(self):
         """
@@ -157,7 +158,7 @@ def parse_args():
 
     # -- training params
     parser.add_argument('--epochs', type=int, default=3000, help='The number of epochs to run.')
-    parser.add_argument('--N', type=int, default=200, help='Number of training data.')  # fixme
+    parser.add_argument('--N', type=int, default=400, help='Number of training data.')
 
     # -- meta-training params
     parser.add_argument('--steps', type=int, default=5, help='.')  # fixme: add definition
@@ -172,7 +173,8 @@ def main():
     args = parse_args()
 
     # -- load data
-    train_dataset = DataLoader(dataset=OmniglotDataset(args.steps), batch_size=args.tasks, shuffle=True, drop_last=True)
+    train_dataset = DataLoader(dataset=OmniglotDataset(args.steps, args.N), batch_size=args.tasks, shuffle=True,
+                               drop_last=True)
 
     # -- train model
     my_train = Train(train_dataset, args)

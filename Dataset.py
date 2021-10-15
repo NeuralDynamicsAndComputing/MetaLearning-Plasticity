@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 
 
 class OmniglotDataset(Dataset):
-    def __init__(self, steps):
+    def __init__(self, steps, N):
         try:
             # -- create directory
             s_dir = os.getcwd()
@@ -33,7 +33,7 @@ class OmniglotDataset(Dataset):
         self.steps = steps
 
         # --
-        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders][:100]
+        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders][:N]
         self.transform = transforms.Compose([transforms.Resize((28, 28)), transforms.ToTensor()])
 
     @staticmethod
