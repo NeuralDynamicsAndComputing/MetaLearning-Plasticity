@@ -6,8 +6,9 @@ import numpy as np
 
 from torch import nn, optim
 from torchviz import make_dot
-from kymatio.torch import Scattering2D
+from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader
+# from kymatio.torch import Scattering2D
 
 from Optim_rule import MyOptimizer
 from Dataset import OmniglotDataset, process_data
@@ -25,35 +26,17 @@ class MyModel(nn.Module):
         # -- dim
         self.in_dim = 784
 
-        # -- network parameters
-        self.fc1 = nn.Linear(self.in_dim, 512)  # , bias=False)
-        self.fc2 = nn.Linear(512, 264)  # , bias=False)
-        self.fc3 = nn.Linear(264, 128)  # , bias=False)
-        self.fc4 = nn.Linear(128, 964)  # , bias=False)
+        # -- network params
+        self.fc1 = nn.Linear(self.in_dim, 512)
+        self.fc2 = nn.Linear(512, 264)
+        self.fc3 = nn.Linear(264, 128)
+        self.fc4 = nn.Linear(128, 964)
 
         self.relu = nn.ReLU()
 
-        # -- set feedback and feedforward param lists
-        self.set_param_lists()
-
-    def set_param_lists(self):
-
-        self.feed_fwd_params_list = nn.ParameterList([
-            self.fc1.weight,
-            self.fc1.bias,
-            self.fc2.weight,
-            self.fc2.bias,
-            self.fc3.weight,
-            self.fc3.bias,
-            self.fc4.weight,
-            self.fc4.bias
-        ])
-
-        self.feed_bck_params_list = nn.ParameterList([
-            nn.Parameter(self.fc2.weight.detach().clone().T),
-            nn.Parameter(self.fc3.weight.detach().clone().T),
-            nn.Parameter(self.fc4.weight.detach().clone().T)
-        ])
+        # -- learning params
+        self.alpha = nn.Parameter(torch.randn(1))
+        self.beta = nn.Parameter(torch.randn(1))
 
     def forward(self, y0):
 
@@ -69,7 +52,7 @@ class Train:
 
         # -- model params
         self.model = MyModel()
-        self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
+        # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
         self.softmax = nn.Softmax(dim=1)
         self.n_layers = 4  # fixme
 
@@ -81,21 +64,11 @@ class Train:
         self.N = args.N
 
         # -- optimization params
-        self.lr_innr = args.lr_innr
-        self.lr_meta = args.lr_meta
+        self.lr_innr = args.lr_innr  # fixme
+        self.lr_meta = args.lr_meta  # fixme
         self.loss_func = nn.CrossEntropyLoss()
-        self.optim_meta = optim.Adam(self.model.feed_bck_params_list, lr=self.lr_meta)
-        self.optim_innr = MyOptimizer(self.model.feed_fwd_params_list, lr=self.lr_innr)
-
-    def feedback_update(self, y):
-        """
-            updates feedback matrix B.
-        :param y: input, activations, and prediction
-        :return:
-        """
-        for i in range(1, self.n_layers):
-            # self.B[i] -= self.lr_meta * np.matmul(self.e[i], y[i].T).T
-            self.B[i]  # todo: get model params
+        self.optim_meta = optim.Adam(self.model.parameters(), lr=self.lr_meta)
+        # self.optim_innr = MyOptimizer(self.model.parameters(), lr=self.lr_innr)  # todo: pass network params only
 
     def train_epoch(self, epoch):
         """
@@ -104,38 +77,46 @@ class Train:
         """
         self.model.train()
         train_loss = 0
-
         for batch_idx, data in enumerate(self.TrainDataset):  # fixme: this way each X is only observed once.
 
             # -- training data
             img_trn, lbl_trn, img_tst, lbl_tst = process_data(data)
+            params = dict(self.model.named_parameters())
 
             """ inner update """
             for image, label in zip(img_trn, lbl_trn):
+                params = {k: v.clone() for k, v in params.items()}
+
                 # -- predict
                 image = image.reshape(1, -1)
-                y, logits = self.model(image)
+                _, logits = _stateless.functional_call(self.model, params, image)
 
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
                     quit()
 
                 # -- compute loss
-                loss_innr = self.loss_func(logits, label)
+                loss_inner = self.loss_func(logits, label)
 
-                # -- update params
-                # todo: 1) compute W updates w/ error and feedback, 2) custom update rule
-                self.optim_innr.step(loss_innr, y, logits, self.model.feed_bck_params_list) # todo: use that register thing (!) to call from opt func w/o passing all these info.
+                # -- update network params
+                self.optim_meta.zero_grad()  # fixme
+                loss_inner.backward(create_graph=True, inputs=params.values())
+                for k, p in params.items():  #fixme
+                    if k is not 'alpha' and k is not 'beta':
+                        p.update = - self.model.alpha * p.grad
+                        params[k] = p + p.update
 
             """ meta update """
             # -- predict
-            _, logits = self.model(img_tst.reshape(25, -1))  # self.model(self.scat(image).reshape(1, -1))
+            _, logits = _stateless.functional_call(self.model, params, img_tst.reshape(25, -1))
+            if False:
+                make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
+                quit()
 
             # -- compute loss
             loss_meta = self.loss_func(logits, lbl_tst.reshape(-1))
 
             # -- update params
-            # todo: 1) define feedback and its update rule 2) meta learn feedback
             self.optim_meta.zero_grad()
             loss_meta.backward()
             train_loss += loss_meta.item()
