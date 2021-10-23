@@ -1,7 +1,14 @@
 import torch
 
+def MyOptimizer(params, lr):
+    for k, p in params.items():
+        if k is not 'alpha' and k is not 'beta':
+            p.update = - lr * p.grad
+            params[k] = p + p.update            # update weight
 
-class MyOptimizer(torch.optim.Optimizer):
+    return params
+
+class MyOptimizer_(torch.optim.Optimizer):
     """
         Weight update rule.
     """

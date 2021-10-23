@@ -99,12 +99,8 @@ class Train:
                 loss_inner = self.loss_func(logits, label)
 
                 # -- update network params
-                self.optim_meta.zero_grad()  # fixme
                 loss_inner.backward(create_graph=True, inputs=params.values())
-                for k, p in params.items():  #fixme
-                    if k is not 'alpha' and k is not 'beta':
-                        p.update = - self.model.alpha * p.grad
-                        params[k] = p + p.update
+                params = MyOptimizer(params, self.model.alpha)
 
             """ meta update """
             # -- predict
