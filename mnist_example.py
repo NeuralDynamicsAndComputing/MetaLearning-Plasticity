@@ -7,7 +7,7 @@ import numpy as np
 from torch import nn, optim
 from torchviz import make_dot
 from torch.nn.utils import _stateless
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
 
 from Optim_rule import MyOptimizer
@@ -48,7 +48,7 @@ class MyModel(nn.Module):
 
 
 class Train:
-    def __init__(self, trainset, args):
+    def __init__(self, train_dataloader, args):
 
         # -- model params
         self.model = MyModel()
@@ -60,7 +60,7 @@ class Train:
         self.epochs = args.epochs
 
         # -- data params
-        self.TrainDataset = trainset
+        self.TrainDataloader = train_dataloader
         self.N = args.N
 
         # -- optimization params
@@ -70,14 +70,14 @@ class Train:
         self.optim_meta = optim.Adam(self.model.parameters(), lr=self.lr_meta)
         # self.optim_innr = MyOptimizer(self.model.parameters(), lr=self.lr_innr)  # todo: pass network params only
 
-    def train_epoch(self, epoch):
+    def __call__(self):
         """
-            Single epoch training.
-        :param epoch: current epoch number.
+            Model training.
         """
         self.model.train()
-        train_loss = 0
-        for batch_idx, data in enumerate(self.TrainDataset):  # fixme: this way each X is only observed once.
+        for episode, data in enumerate(self.TrainDataloader):
+
+            train_loss = 0
 
             # -- training data
             img_trn, lbl_trn, img_tst, lbl_tst = process_data(data)
@@ -118,15 +118,8 @@ class Train:
             train_loss += loss_meta.item()
             self.optim_meta.step()
 
-        # -- log
-        print('Train Epoch: {}\tLoss: {:.6f}'.format(epoch, train_loss / (self.N * 5)))
-
-    def __call__(self):
-        """
-            Model training.
-        """
-        for epoch in range(1, self.epochs+1):
-            self.train_epoch(epoch)
+            # -- log
+            print('Train episode: {}\tLoss: {:.6f}'.format(episode, train_loss / (self.N * 5)))
 
 
 def parse_args():
@@ -135,6 +128,7 @@ def parse_args():
 
     # -- training params
     parser.add_argument('--epochs', type=int, default=3000, help='The number of epochs to run.')
+
     parser.add_argument('--N', type=int, default=400, help='Number of training data.')
 
     # -- meta-training params
@@ -150,11 +144,13 @@ def main():
     args = parse_args()
 
     # -- load data
-    train_dataset = DataLoader(dataset=OmniglotDataset(args.steps, args.N), batch_size=args.tasks, shuffle=True,
-                               drop_last=True)
+    M = 100
+    dataset = OmniglotDataset(steps=args.steps, N=args.N)
+    sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=M)
+    dataloader = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.tasks, drop_last=True)
 
     # -- train model
-    my_train = Train(train_dataset, args)
+    my_train = Train(dataloader, args)
     my_train()
 
 
