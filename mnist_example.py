@@ -50,7 +50,7 @@ class MyModel(nn.Module):
 
 
 class Train:
-    def __init__(self, train_dataloader, args):
+    def __init__(self, trainset, args):
 
         # -- model params
         self.model = MyModel()
@@ -58,11 +58,8 @@ class Train:
         self.softmax = nn.Softmax(dim=1)
         self.n_layers = 4  # fixme
 
-        # -- training params
-        self.epochs = args.epochs
-
         # -- data params
-        self.TrainDataloader = train_dataloader
+        self.TrainDataset = trainset
 
         # -- optimization params
         self.lr_innr = args.lr_innr  # fixme
@@ -76,7 +73,7 @@ class Train:
             Model training.
         """
         self.model.train()
-        for episode, data in enumerate(self.TrainDataloader):
+        for episode_idx, data in enumerate(self.TrainDataset):  # fixme: this way each X is only observed once.
 
             train_loss = 0
 
@@ -120,6 +117,7 @@ class Train:
             self.optim_meta.step()
 
             # -- log
+            print('Train Episode: {}\tLoss: {:.6f}\tlr: {:.6f}\tdr: {:.6f}'.format(episode_idx, loss_meta.item() / 25, self.model.alpha.detach().numpy()[0], self.model.beta.detach().numpy()[0]))
 
 
 def parse_args():
@@ -127,8 +125,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=desc)
 
     # -- training params
-    parser.add_argument('--epochs', type=int, default=3000, help='The number of epochs to run.')
-
+    parser.add_argument('--episodes', type=int, default=3000, help='The number of episodes to run.')
 
     # -- meta-training params
     parser.add_argument('--steps', type=int, default=5, help='.')  # fixme: add definition
@@ -143,9 +140,8 @@ def main():
     args = parse_args()
 
     # -- load data
-    M = 100
-    sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=M)
     dataset = OmniglotDataset(steps=args.steps)
+    sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.tasks)
     dataloader = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.tasks, drop_last=True)
 
     # -- train model
