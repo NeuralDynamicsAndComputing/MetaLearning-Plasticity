@@ -37,8 +37,8 @@ class MyModel(nn.Module):
         self.relu = nn.ReLU()
 
         # -- learning params
-        self.alpha = nn.Parameter(torch.randn(1))
-        self.beta = nn.Parameter(torch.randn(1))
+        self.alpha = nn.Parameter(torch.rand(1) / 100)
+        self.beta = nn.Parameter(torch.rand(1) / 100)
 
     def forward(self, y0):
 
@@ -102,7 +102,7 @@ class Train:
 
             """ meta update """
             # -- predict
-            _, logits = _stateless.functional_call(self.model, params, img_tst.reshape(25, -1))
+            _, logits = _stateless.functional_call(self.model, params, img_tst.reshape(25, -1))  # fixme: 5*args.tasks
             if False:
                 make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
                 quit()
