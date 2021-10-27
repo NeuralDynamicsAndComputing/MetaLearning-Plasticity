@@ -1,10 +1,11 @@
 import torch
 
-def MyOptimizer(params, lr):
+def MyOptimizer(params, lr, dr):
     for k, p in params.items():
         if k is not 'alpha' and k is not 'beta':
             p.update = - lr * p.grad
-            params[k] = p + p.update            # update weight
+            params[k] = (1 - dr) * p + p.update            # update weight
+            # params[k] =  p + p.update            # update weight
 
     return params
 

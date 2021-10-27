@@ -100,7 +100,7 @@ class Train:
 
                 # -- update network params
                 loss_inner.backward(create_graph=True, inputs=params.values())
-                params = MyOptimizer(params, self.model.alpha)
+                params = MyOptimizer(params, self.model.alpha, self.model.beta)
 
             """ meta update """
             # -- predict
