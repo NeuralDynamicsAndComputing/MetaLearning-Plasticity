@@ -18,13 +18,15 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 np.random.seed(0)
 torch.manual_seed(0)
 
+n = 84  # 56X56 w/ softplus : until epoch 35 fixme
+nxn = n * n
 
 class MyModel(nn.Module):
     def __init__(self):
         super(MyModel, self).__init__()
 
         # -- dim
-        self.in_dim = 784
+        self.in_dim = nxn
 
         # -- network params
         self.fc1 = nn.Linear(self.in_dim, 512)
@@ -61,7 +63,6 @@ class Train:
 
         # -- data params
         self.TrainDataloader = train_dataloader
-        self.N = args.N
 
         # -- optimization params
         self.lr_innr = args.lr_innr  # fixme
@@ -119,7 +120,6 @@ class Train:
             self.optim_meta.step()
 
             # -- log
-            print('Train episode: {}\tLoss: {:.6f}'.format(episode, train_loss / (self.N * 5)))
 
 
 def parse_args():
@@ -129,7 +129,6 @@ def parse_args():
     # -- training params
     parser.add_argument('--epochs', type=int, default=3000, help='The number of epochs to run.')
 
-    parser.add_argument('--N', type=int, default=400, help='Number of training data.')
 
     # -- meta-training params
     parser.add_argument('--steps', type=int, default=5, help='.')  # fixme: add definition
@@ -145,8 +144,8 @@ def main():
 
     # -- load data
     M = 100
-    dataset = OmniglotDataset(steps=args.steps, N=args.N)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=M)
+    dataset = OmniglotDataset(steps=args.steps)
     dataloader = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.tasks, drop_last=True)
 
     # -- train model

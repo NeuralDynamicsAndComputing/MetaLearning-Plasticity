@@ -9,9 +9,11 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import torchvision.transforms as transforms
 
+n = 84
+nxn = n * n
 
 class OmniglotDataset(Dataset):
-    def __init__(self, steps, N):
+    def __init__(self, steps):
         try:
             # -- create directory
             s_dir = os.getcwd()
@@ -33,8 +35,8 @@ class OmniglotDataset(Dataset):
         self.steps = steps
 
         # --
-        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders][:N]
-        self.transform = transforms.Compose([transforms.Resize((28, 28)), transforms.ToTensor()])
+        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders]
+        self.transform = transforms.Compose([transforms.Resize((n, n)), transforms.ToTensor()])
 
     @staticmethod
     def download(url, filename):
@@ -63,9 +65,9 @@ def process_data(data, tasks=5, steps=5, iid=True):
 
     img_trn, lbl_trn, img_tst, lbl_tst = data
 
-    img_tst = torch.reshape(img_tst, (tasks * 5,  28, 28))
+    img_tst = torch.reshape(img_tst, (tasks * 5,  n, n))
     lbl_tst = torch.reshape(lbl_tst, (tasks * 5, 1))
-    img_trn = torch.reshape(img_trn, (tasks * steps, 28, 28))
+    img_trn = torch.reshape(img_trn, (tasks * steps, n, n))
     lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
 
     if iid:
