@@ -73,7 +73,7 @@ class Train:
             Model training.
         """
         self.model.train()
-        for episode_idx, data in enumerate(self.TrainDataset):  # fixme: this way each X is only observed once.
+        for episode_idx, data in enumerate(self.TrainDataset):
 
             train_loss = 0
 
