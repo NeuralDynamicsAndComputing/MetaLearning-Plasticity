@@ -10,7 +10,7 @@ from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
 
-from Optim_rule import MyOptimizer
+from Optim_rule import MyOptimizer as OptimAdpt
 from Dataset import OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -79,18 +79,21 @@ class Train:
         # -- optimization params
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.optim_meta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
+        self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
 
     def load_model(self, path_pretrained):
         """
-            Loads pretrained parameters for the convolutional layers.
+            Loads pretrained parameters for the convolutional layers and sets adaptation and meta training flags for
+            parameters.
         """
-        new_model = MyModel()
+        # -- init model
+        model = MyModel()
         old_model = torch.load(path_pretrained)
         for old_key in old_model:
-            dict(new_model.named_parameters())[old_key].data = old_model[old_key]
+            dict(model.named_parameters())[old_key].data = old_model[old_key]
 
-        for key, val in new_model.named_parameters():
+        # -- learning flags
+        for key, val in model.named_parameters():
             if 'cn' in key:
                 val.meta, val.adapt = False, False
             elif 'fc' in key:
@@ -100,9 +103,9 @@ class Train:
 
             # -- learnable params
             if val.meta == True:
-                new_model.params.append(val)
+                model.params.append(val)
 
-        return new_model
+        return model
 
     def __call__(self):
         """
@@ -135,7 +138,7 @@ class Train:
 
                 # -- update network params
                 loss_inner.backward(create_graph=True, inputs=params.values())
-                params = MyOptimizer(params, self.model.alpha, self.model.beta)
+                params = OptimAdpt(params, self.model.alpha, self.model.beta)
 
             """ meta update """
             # -- predict
@@ -148,10 +151,10 @@ class Train:
             loss_meta = self.loss_func(logits, lbl_tst.reshape(-1))
 
             # -- update params
-            self.optim_meta.zero_grad()
+            self.OptimMeta.zero_grad()
             loss_meta.backward()
             train_loss += loss_meta.item()
-            self.optim_meta.step()
+            self.OptimMeta.step()
 
             # -- log
             print('Train Episode: {}\tLoss: {:.6f}\tlr: {:.6f}\tdr: {:.6f}'.format(episode_idx, loss_meta.item() / 25,
