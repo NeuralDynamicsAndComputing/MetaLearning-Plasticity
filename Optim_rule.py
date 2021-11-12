@@ -2,14 +2,13 @@ import torch
 
 def MyOptimizer(params, lr, dr):
     for k, p in params.items():
-        if k is not 'alpha' and k is not 'beta':
+        if p.adapt:
             p.update = - lr * p.grad
-            params[k] = (1 - dr) * p + p.update            # update weight
-            # params[k] =  p + p.update            # update weight
+            params[k] = (1 - dr) * p + p.update    # update weight
 
     return params
 
-class MyOptimizer_(torch.optim.Optimizer):
+class MyOptimizer_(torch.optim.Optimizer): # todo: take matrix multiplications for updates and remove the rest
     """
         Weight update rule.
     """
