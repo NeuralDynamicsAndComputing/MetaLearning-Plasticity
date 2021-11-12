@@ -18,41 +18,11 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 np.random.seed(0)
 torch.manual_seed(0)
 
-n = 84  # fixme
-nxn = n * n
 
 class MyModel(nn.Module):
     def __init__(self):
         super(MyModel, self).__init__()
-
-        # -- dim
-        self.in_dim = nxn
-
-        # -- network params
-        self.fc1 = nn.Linear(self.in_dim, 512)
-        self.fc2 = nn.Linear(512, 264)
-        self.fc3 = nn.Linear(264, 128)
-        self.fc4 = nn.Linear(128, 964)
-
-        self.relu = nn.Softplus(beta=10)
-
-        # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100)
-        self.beta = nn.Parameter(torch.rand(1) / 100)
-
-    def forward(self, y0):
-
-        y1 = self.relu(self.fc1(y0))
-        y2 = self.relu(self.fc2(y1))
-        y3 = self.relu(self.fc3(y2))
-
-        return (y0, y1, y2, y3), self.fc4(y3)
-
-
-class NewModel(nn.Module):
-    def __init__(self):
-        super(NewModel, self).__init__()
-        # -- network params
+        # -- embedding params
         self.cn1 = nn.Conv2d(1, 256, kernel_size=3, stride=2)
         self.cn2 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
         self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
@@ -60,15 +30,18 @@ class NewModel(nn.Module):
         self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
         self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
 
+        # prediction params
         self.fc1 = nn.Linear(2304, 1700)
         self.fc2 = nn.Linear(1700, 1200)
         self.fc3 = nn.Linear(1200, 964)
 
-        self.relu = nn.ReLU()
-
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100)
         self.beta = nn.Parameter(torch.rand(1) / 100)
+
+        # -- non-linearity
+        self.relu = nn.ReLU()
+        self.sopl = nn.Softplus(beta=10)
 
         # -- learnable params
         self.params = nn.ParameterList()
@@ -84,8 +57,8 @@ class NewModel(nn.Module):
 
         y6 = y6.view(y6 .size(0), -1)
 
-        y7 = self.relu(self.fc1(y6))
-        y8 = self.relu(self.fc2(y7))
+        y7 = self.relu(self.fc1(y6))  # todo: change to softplus
+        y8 = self.relu(self.fc2(y7))  # todo: change to softplus
 
         return (y6, y7, y8), self.fc3(y8)
 
@@ -112,7 +85,7 @@ class Train:
         """
             Loads pretrained parameters for the convolutional layers.
         """
-        new_model = NewModel()
+        new_model = MyModel()
         old_model = torch.load(path_pretrained)
         for old_key in old_model:
             dict(new_model.named_parameters())[old_key].data = old_model[old_key]
