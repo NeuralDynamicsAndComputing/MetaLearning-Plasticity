@@ -77,31 +77,3 @@ def process_data(data, tasks=5, steps=5, iid=True):
         lbl_trn = lbl_trn[perm]
 
     return img_trn, lbl_trn, img_tst, lbl_tst
-
-
-def main():
-    # TODO: remove
-    tasks = 5
-    steps = 5
-    iid = True
-
-    TrainDataset = DataLoader(dataset=OmniglotDataset(steps), batch_size=tasks, shuffle=True)
-
-    for idx, data in enumerate(TrainDataset):
-
-        img_trn, lbl_trn, img_tst, lbl_tst = process_data(data)
-
-        for image, label in zip(img_trn, lbl_trn):
-
-            print(img_trn[0])
-
-            print(label)
-
-        print(lbl_tst)
-
-        quit()
-
-
-if __name__ == '__main__':
-    # TODO: remove
-    main()
