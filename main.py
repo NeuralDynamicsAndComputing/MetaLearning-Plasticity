@@ -10,7 +10,7 @@ from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
 
-from Optim_rule import MyOptimizer as OptimAdpt
+from Optim_rule import my_optimizer as OptimAdpt
 from Dataset import OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -30,10 +30,13 @@ class MyModel(nn.Module):
         self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
         self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
 
-        # prediction params
+        # -- prediction params
         self.fc1 = nn.Linear(2304, 1700)
         self.fc2 = nn.Linear(1700, 1200)
         self.fc3 = nn.Linear(1200, 964)
+
+        # -- feedback
+        self.feedback = nn.ModuleList([self.fc1, self.fc2, self.fc3])
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100)
@@ -41,7 +44,8 @@ class MyModel(nn.Module):
 
         # -- non-linearity
         self.relu = nn.ReLU()
-        self.sopl = nn.Softplus(beta=10)
+        self.Beta = 10
+        self.sopl = nn.Softplus(beta=self.Beta)
 
         # -- learnable params
         self.params = nn.ParameterList()
@@ -57,8 +61,8 @@ class MyModel(nn.Module):
 
         y6 = y6.view(y6 .size(0), -1)
 
-        y7 = self.relu(self.fc1(y6))  # todo: change to softplus
-        y8 = self.relu(self.fc2(y7))  # todo: change to softplus
+        y7 = self.sopl(self.fc1(y6))
+        y8 = self.sopl(self.fc2(y7))
 
         return (y6, y7, y8), self.fc3(y8)
 
@@ -127,7 +131,7 @@ class Train:
                     params[key].adapt = dict(self.model.named_parameters())[key].adapt
 
                 # -- predict
-                _, logits = _stateless.functional_call(self.model, params, image.unsqueeze(0).unsqueeze(0))
+                y, logits = _stateless.functional_call(self.model, params, image.unsqueeze(0).unsqueeze(0))
 
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
@@ -138,7 +142,8 @@ class Train:
 
                 # -- update network params
                 loss_inner.backward(create_graph=True, inputs=params.values())
-                params = OptimAdpt(params, self.model.alpha, self.model.beta)
+                params = OptimAdpt(params, loss_inner, logits, y, self.model.Beta, self.model.feedback,
+                                   self.model.alpha, self.model.beta)
 
             """ meta update """
             # -- predict
