@@ -34,13 +34,16 @@ class MyModel(nn.Module):
         self.fc1 = nn.Linear(2304, 1700)
         self.fc2 = nn.Linear(1700, 1200)
         self.fc3 = nn.Linear(1200, 964)
+        self.prd_dict = nn.ModuleDict({'0': self.fc1, '1': self.fc2, '2': self.fc3})
 
-        # -- feedback
-        self.feedback = nn.ModuleList([self.fc1, self.fc2, self.fc3])
+        # -- feedback todo: transpose B
+        self.feedback = nn.ParameterDict({k: nn.Parameter(m.weight.clone().detach()) for k, m in self.prd_dict.items()})
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100)
         self.beta = nn.Parameter(torch.rand(1) / 100)
+        self.alpha_fdb = nn.Parameter(torch.rand(1) / 100)
+        self.beta_fdb = nn.Parameter(torch.rand(1) / 100)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -100,7 +103,7 @@ class Train:
         for key, val in model.named_parameters():
             if 'cn' in key:
                 val.meta, val.adapt = False, False
-            elif 'fc' in key:
+            elif 'fc' in key or 'feedback' in key:
                 val.meta, val.adapt = True, True
             else:
                 val.meta, val.adapt = True, False
@@ -123,16 +126,16 @@ class Train:
             # -- training data
             img_trn, lbl_trn, img_tst, lbl_tst = process_data(data)
             params = dict(self.model.named_parameters())
-
+            feedbacks = self.model.feedback
             """ adaptation """
             for image, label in zip(img_trn, lbl_trn):
-                params = {key: val.clone() for key, val in params.items()}
+                params = {key: param.clone() for key, param in params.items()}
                 for key in params:
                     params[key].adapt = dict(self.model.named_parameters())[key].adapt
+                feedbacks = {key: B.clone() for key, B in feedbacks.items()}
 
                 # -- predict
                 y, logits = _stateless.functional_call(self.model, params, image.unsqueeze(0).unsqueeze(0))
-
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
                     quit()
@@ -142,8 +145,9 @@ class Train:
 
                 # -- update network params
                 loss_inner.backward(create_graph=True, inputs=params.values())
-                params = OptimAdpt(params, loss_inner, logits, y, self.model.Beta, self.model.feedback,
-                                   self.model.alpha, self.model.beta)
+                params, feedbacks = OptimAdpt(params, loss_inner, logits, y, self.model.Beta, feedbacks,
+                                              self.model.alpha, self.model.beta, self.model.alpha_fdb,
+                                              self.model.beta_fdb)
 
             """ meta update """
             # -- predict
@@ -156,6 +160,8 @@ class Train:
             loss_meta = self.loss_func(logits, lbl_tst.reshape(-1))
 
             # -- update params
+            # todo: ****** check 'mrcl', see if all params are updated using the outer optimization alg at the end of
+            #  the day. if so, I guess I should also use the learning rate we just learned to update it.
             self.OptimMeta.zero_grad()
             loss_meta.backward()
             train_loss += loss_meta.item()

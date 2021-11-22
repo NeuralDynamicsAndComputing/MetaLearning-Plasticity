@@ -1,7 +1,7 @@
 import torch
 
 
-def my_optimizer(params, loss, logits, activation, Beta, feedback, lr, dr):
+def my_optimizer(params, loss, logits, activation, Beta, feedback, lr, dr, lr_fdb, dr_fdb):
     """
         One step update of the inner-loop.
     :param params:
@@ -16,10 +16,8 @@ def my_optimizer(params, loss, logits, activation, Beta, feedback, lr, dr):
     """
     # -- error
     e = [torch.autograd.grad(loss, logits, create_graph=True)[0]]
-    for y, layer in zip(reversed(activation), reversed(list(feedback))):
-        for k, B in layer.named_parameters():
-            if k == 'weight':
-                e.insert(0, torch.matmul(e[0], B.clone()) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
+    for y, i in zip(reversed(activation), reversed(list(feedback))):  # todo: transpose B
+        e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
     # -- weight update
     i = 0
@@ -31,7 +29,11 @@ def my_optimizer(params, loss, logits, activation, Beta, feedback, lr, dr):
             elif k[4:] == 'bias':
                 p.update = - lr * e[i+1].squeeze(0)
                 params[k] = (1 - dr) * p + p.update
-
                 i += 1
 
-    return params
+    # -- feedback update
+    for i, (key, B) in enumerate(feedback.items()):
+        B.update = - lr_fdb * torch.matmul(e[i+1].T, activation[i])
+        feedback[key] = (1 - dr_fdb) * B + B.update
+
+    return params, feedback
