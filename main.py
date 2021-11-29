@@ -68,7 +68,7 @@ class MyModel(nn.Module):
 
 
 class Train:
-    def __init__(self, trainset, args):
+    def __init__(self, meta_dataset, args):
 
         # -- model params
         path_pretrained = './data/models/omniglot_example/model_stat.pth'
@@ -78,7 +78,10 @@ class Train:
         self.n_layers = 4  # fixme
 
         # -- data params
-        self.TrainDataset = trainset
+        self.meta_dataset = meta_dataset
+        self.M = args.M
+        self.K = args.K
+        self.Q = args.Q
 
         # -- optimization params
         self.lr_meta = args.lr_meta
@@ -116,22 +119,22 @@ class Train:
             Model training.
         """
         self.model.train()
-        for episode_idx, data in enumerate(self.TrainDataset):
+        for eps, data in enumerate(self.meta_dataset):
 
             train_loss = 0
 
             # -- training data
-            img_trn, lbl_trn, img_tst, lbl_tst = process_data(data)
+            x_trn, y_trn, x_qry, y_qry = process_data(data, M=self.M, K=self.K, Q=self.Q)
             params = dict(self.model.named_parameters())
 
             """ adaptation """
-            for image, label in zip(img_trn, lbl_trn):
+            for x, label in zip(x_trn, y_trn):
                 params = {key: val.clone() for key, val in params.items()}
                 for key in params:
                     params[key].adapt = dict(self.model.named_parameters())[key].adapt
 
                 # -- predict
-                y, logits = _stateless.functional_call(self.model, params, image.unsqueeze(0).unsqueeze(0))
+                y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
 
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
@@ -147,13 +150,13 @@ class Train:
 
             """ meta update """
             # -- predict
-            _, logits = _stateless.functional_call(self.model, params, img_tst.unsqueeze(1))
+            _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
             if False:
                 make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
                 quit()
 
             # -- compute loss
-            loss_meta = self.loss_func(logits, lbl_tst.reshape(-1))
+            loss_meta = self.loss_func(logits, y_qry.reshape(-1))
 
             # -- update params
             self.OptimMeta.zero_grad()
@@ -162,21 +165,22 @@ class Train:
             self.OptimMeta.step()
 
             # -- log
-            print('Train Episode: {}\tLoss: {:.6f}\tlr: {:.6f}\tdr: {:.6f}'.format(episode_idx, loss_meta.item() / 25,
+            print('Train Episode: {}\tLoss: {:.6f}\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item() / 25,
                                                                                    self.model.alpha.detach().numpy()[0],
                                                                                    self.model.beta.detach().numpy()[0]))
 
 
 def parse_args():
-    desc = "Numpy implementation of mnist label predictor."
+    desc = "Pytorch implementation of meta-plasticity model."
     parser = argparse.ArgumentParser(description=desc)
 
     # -- training params
     parser.add_argument('--episodes', type=int, default=3000, help='The number of episodes to run.')
 
     # -- meta-training params
-    parser.add_argument('--steps', type=int, default=5, help='.')  # fixme: add definition
-    parser.add_argument('--tasks', type=int, default=5, help='.')  # fixme: add definition
+    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
+    parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
+    parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
 
     return parser.parse_args()
@@ -186,12 +190,12 @@ def main():
     args = parse_args()
 
     # -- load data
-    dataset = OmniglotDataset(steps=args.steps)
-    sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.tasks)
-    dataloader = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.tasks, drop_last=True)  # fixme: what does task mean here?
+    dataset = OmniglotDataset(K=args.K, Q=args.Q)
+    sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
+    meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
     # -- train model
-    my_train = Train(dataloader, args)
+    my_train = Train(meta_dataset, args)
     my_train()
 
 

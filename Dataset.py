@@ -4,7 +4,7 @@ import zipfile
 import requests
 
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 import numpy as np
 import torchvision.transforms as transforms
@@ -13,7 +13,7 @@ n = 84
 nxn = n * n
 
 class OmniglotDataset(Dataset):
-    def __init__(self, steps):
+    def __init__(self, K, Q=5):
         try:
             # -- create directory
             s_dir = os.getcwd()
@@ -32,7 +32,8 @@ class OmniglotDataset(Dataset):
             pass
 
         self.path = omniglot_dir + file_name
-        self.steps = steps
+        self.K = K
+        self.Q = Q
 
         # --
         self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders]
@@ -58,22 +59,23 @@ class OmniglotDataset(Dataset):
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(20), dtype=int)
 
-        return img[:self.steps], idx_vec[:self.steps], img[self.steps:self.steps+5], idx_vec[self.steps:self.steps+5]
+        return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
 
 
-def process_data(data, tasks=5, steps=5, iid=True):
+def process_data(data, M=5, K=5, Q=5, iid=True):
 
     img_trn, lbl_trn, img_tst, lbl_tst = data
 
-    img_tst = torch.reshape(img_tst, (tasks * 5,  n, n))
-    lbl_tst = torch.reshape(lbl_tst, (tasks * 5, 1))
-    img_trn = torch.reshape(img_trn, (tasks * steps, n, n))
-    lbl_trn = torch.reshape(lbl_trn, (tasks * steps, 1))
+    img_tst = torch.reshape(img_tst, (M * Q,  n, n))
+    lbl_tst = torch.reshape(lbl_tst, (M * Q, 1))
+    img_trn = torch.reshape(img_trn, (M * K, n, n))
+    lbl_trn = torch.reshape(lbl_trn, (M * K, 1))
 
     if iid:
-        perm = np.random.choice(range(tasks * steps), tasks * steps, False)
+        perm = np.random.choice(range(M * K), M * K, False)
 
         img_trn = img_trn[perm]
         lbl_trn = lbl_trn[perm]
 
     return img_trn, lbl_trn, img_tst, lbl_tst
+
