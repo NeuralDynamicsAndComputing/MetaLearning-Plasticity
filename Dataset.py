@@ -166,18 +166,18 @@ class OmniglotDataset(Dataset):
 
 def process_data(data, M=5, K=5, Q=5, iid=True):
 
-    img_trn, lbl_trn, img_tst, lbl_tst = data
+    x_trn, y_trn, x_qry, y_qry = data
 
-    img_tst = torch.reshape(img_tst, (M * Q,  n, n))
-    lbl_tst = torch.reshape(lbl_tst, (M * Q, 1))
-    img_trn = torch.reshape(img_trn, (M * K, n, n))
-    lbl_trn = torch.reshape(lbl_trn, (M * K, 1))
+    x_qry = torch.reshape(x_qry, (M * Q, n, n))
+    y_qry = torch.reshape(y_qry, (M * Q, 1))
+    x_trn = torch.reshape(x_trn, (M * K, n, n))
+    y_trn = torch.reshape(y_trn, (M * K, 1))
 
     if iid:
         perm = np.random.choice(range(M * K), M * K, False)
 
-        img_trn = img_trn[perm]
-        lbl_trn = lbl_trn[perm]
+        x_trn = x_trn[perm]
+        y_trn = y_trn[perm]
 
-    return img_trn, lbl_trn, img_tst, lbl_tst
+    return x_trn, y_trn, x_qry, y_qry
 
