@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
 
 from Optim_rule import MyOptimizer as OptimAdpt
-from Dataset import OmniglotDataset, process_data
+from Dataset import EmnistDataset, OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -133,7 +133,7 @@ class Train:
                 _, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
 
                 if False:
-                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
+                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                     quit()
 
                 # -- compute loss
@@ -147,7 +147,7 @@ class Train:
             # -- predict
             _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
             if False:
-                make_dot(logits, params=dict(list(self.model.named_parameters()))).render('model_torchviz', format='png')
+                make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                 quit()
 
             # -- compute loss
@@ -173,6 +173,7 @@ def parse_args():
     parser.add_argument('--episodes', type=int, default=3000, help='The number of episodes to run.')
 
     # -- meta-training params
+    parser.add_argument('--dataset', type=str, default='emnist', help='The dataset.')
     parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
@@ -185,7 +186,10 @@ def main():
     args = parse_args()
 
     # -- load data
-    dataset = OmniglotDataset(K=args.K, Q=args.Q)
+    if args.dataset == 'emnist':
+        dataset = EmnistDataset(K=args.K, Q=args.Q)
+    elif args.dataset == 'omniglot':
+        dataset = OmniglotDataset(K=args.K, Q=args.Q)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
