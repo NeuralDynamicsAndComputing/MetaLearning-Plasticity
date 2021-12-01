@@ -114,6 +114,7 @@ class EmnistDataset(Dataset):
 
         return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
 
+
 class OmniglotDataset(Dataset):
     def __init__(self, K, Q=5):
         try:
@@ -180,4 +181,3 @@ def process_data(data, M=5, K=5, Q=5, iid=True):
         y_trn = y_trn[perm]
 
     return x_trn, y_trn, x_qry, y_qry
-
