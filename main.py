@@ -6,6 +6,7 @@ import numpy as np
 
 from torch import nn, optim
 from torchviz import make_dot
+from torch.nn import functional
 from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
@@ -110,6 +111,28 @@ class Train:
 
         return model
 
+    @staticmethod
+    def accuracy(logits, label):
+
+        pred = functional.softmax(logits, dim=1).argmax(dim=1)
+
+        return torch.eq(pred, label).sum().item() / len(label)
+
+    def stats(self, params, x_qry, y_qry, loss, accuracy):
+
+        with torch.no_grad():
+
+            # -- compute meta-loss
+            _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
+            loss_meta = self.loss_func(logits, y_qry.reshape(-1))
+            loss.append(loss_meta)
+
+            # -- compute accuracy
+            acc = self.accuracy(logits, y_qry.reshape(-1))
+            accuracy.append(acc)
+
+        return loss, accuracy
+
     def __call__(self):
         """
             Model training.
@@ -117,17 +140,21 @@ class Train:
         self.model.train()
         for eps, data in enumerate(self.meta_dataset):
 
-            train_loss = 0
+            # -- initialize
+            loss, accuracy = [], []
+            params = dict(self.model.named_parameters())
 
             # -- training data
             x_trn, y_trn, x_qry, y_qry = process_data(data, M=self.M, K=self.K, Q=self.Q)
-            params = dict(self.model.named_parameters())
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
                 params = {key: val.clone() for key, val in params.items()}
                 for key in params:
                     params[key].adapt = dict(self.model.named_parameters())[key].adapt
+
+                # -- stats
+                loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
 
                 # -- predict
                 _, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
@@ -137,10 +164,10 @@ class Train:
                     quit()
 
                 # -- compute loss
-                loss_inner = self.loss_func(logits, label)
+                loss_adapt = self.loss_func(logits, label)
 
                 # -- update network params
-                loss_inner.backward(create_graph=True, inputs=[params[key] for key in params if 'fc' in key])
+                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if 'fc' in key])  # todo:
                 params = OptimAdpt(params, self.model.alpha, self.model.beta)
 
             """ meta update """
@@ -150,19 +177,20 @@ class Train:
                 make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                 quit()
 
-            # -- compute loss
+            # -- compute loss and accuracy
             loss_meta = self.loss_func(logits, y_qry.reshape(-1))
+            acc = self.accuracy(logits, y_qry.reshape(-1))
 
             # -- update params
             self.OptimMeta.zero_grad()
             loss_meta.backward()
-            train_loss += loss_meta.item()
             self.OptimMeta.step()
 
             # -- log
-            print('Train Episode: {}\tLoss: {:.6f}\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item() / 25,
-                                                                                   self.model.alpha.detach().numpy()[0],
-                                                                                   self.model.beta.detach().numpy()[0]))
+            print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
+                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item(), acc,
+                                                    self.model.alpha.detach().numpy()[0],
+                                                    self.model.beta.detach().numpy()[0]))
 
 
 def parse_args():
