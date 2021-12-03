@@ -102,7 +102,7 @@ class Train:
         # -- learning flags
         for key, val in model.named_parameters():
             if 'cn' in key:
-                val.meta, val.adapt = False, False
+                val.meta, val.adapt, val.requires_grad = False, False, False
             elif 'fc' in key:
                 val.meta, val.adapt = True, True
             else:
@@ -144,7 +144,7 @@ class Train:
                 loss_inner = self.loss_func(logits, label)
 
                 # -- update network params
-                loss_inner.backward(create_graph=True, inputs=params.values())
+                loss_inner.backward(create_graph=True, inputs=[params[key] for key in params if 'fc' in key])
                 params = OptimAdpt(params, loss_inner, logits, y, self.model.Beta, self.model.feedback,
                                    self.model.alpha, self.model.beta)
 
@@ -178,7 +178,7 @@ def parse_args():
     parser.add_argument('--episodes', type=int, default=3000, help='The number of episodes to run.')
 
     # -- meta-training params
-    parser.add_argument('--dataset', type=str, default='emnist', help='The dataset.')
+    parser.add_argument('--dataset', type=str, default='omniglot', help='The dataset.')
     parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
