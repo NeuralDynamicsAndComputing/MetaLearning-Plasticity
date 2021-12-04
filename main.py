@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
 
 from utils import log
-from Optim_rule import MyOptimizer as OptimAdpt
+from Optim_rule import my_optimizer as OptimAdpt
 from Dataset import EmnistDataset, OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -173,7 +173,7 @@ class Train:
                 loss_adapt = self.loss_func(logits, label)
 
                 # -- update network params
-                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if 'fc' in key])  # todo:
+                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
                 params = OptimAdpt(params, self.model.alpha, self.model.beta)
 
             """ meta update """

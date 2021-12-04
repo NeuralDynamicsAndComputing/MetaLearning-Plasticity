@@ -1,6 +1,6 @@
 import torch
 
-def MyOptimizer(params, lr, dr):
+def my_optimizer(params, lr, dr):
     for k, p in params.items():
         if p.adapt:
             p.update = - lr * p.grad
@@ -15,7 +15,7 @@ class MyOptimizer_(torch.optim.Optimizer): # todo: take matrix multiplications f
 
     def __init__(self, params, lr=1e-3):
         defaults = dict(lr=lr)
-        super(MyOptimizer, self).__init__(params, defaults)
+        super(MyOptimizer_, self).__init__(params, defaults)
 
     def step(self, loss, y_tuple, logits, feedbacks):
         """
