@@ -1,15 +1,19 @@
+import os
 import torch
 import warnings
 import argparse
+import datetime
 
 import numpy as np
 
 from torch import nn, optim
 from torchviz import make_dot
+from torch.nn import functional
 from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
 
+from utils import log
 from Optim_rule import my_optimizer as OptimAdpt
 from Dataset import EmnistDataset, OmniglotDataset, process_data
 
@@ -91,6 +95,9 @@ class Train:
         self.loss_func = nn.CrossEntropyLoss()
         self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
 
+        # -- log params
+        self.res_dir = args.res_dir
+
     def load_model(self, path_pretrained):
         """
             Loads pretrained parameters for the convolutional layers and sets adaptation and meta training flags for
@@ -117,6 +124,28 @@ class Train:
 
         return model
 
+    @staticmethod
+    def accuracy(logits, label):
+
+        pred = functional.softmax(logits, dim=1).argmax(dim=1)
+
+        return torch.eq(pred, label).sum().item() / len(label)
+
+    def stats(self, params, x_qry, y_qry, loss, accuracy):
+
+        with torch.no_grad():
+
+            # -- compute meta-loss
+            _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
+            loss_meta = self.loss_func(logits, y_qry.reshape(-1))
+            loss.append(loss_meta)
+
+            # -- compute accuracy
+            acc = self.accuracy(logits, y_qry.reshape(-1))
+            accuracy.append(acc)
+
+        return loss, accuracy
+
     def __call__(self):
         """
             Model training.
@@ -124,18 +153,23 @@ class Train:
         self.model.train()
         for eps, data in enumerate(self.meta_dataset):
 
-            train_loss = 0
+            # -- initialize
+            loss, accuracy = [], []
+            params = dict(self.model.named_parameters())
+            feedbacks = self.model.feedback
 
             # -- training data
             x_trn, y_trn, x_qry, y_qry = process_data(data, M=self.M, K=self.K, Q=self.Q)
-            params = dict(self.model.named_parameters())
-            feedbacks = self.model.feedback
+
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
                 params = {key: param.clone() for key, param in params.items()}
                 for key in params:
                     params[key].adapt = dict(self.model.named_parameters())[key].adapt
                 feedbacks = {key: B.clone() for key, B in feedbacks.items()}
+
+                # -- stats
+                loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
 
                 # -- predict
                 y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
@@ -144,11 +178,11 @@ class Train:
                     quit()
 
                 # -- compute loss
-                loss_inner = self.loss_func(logits, label)
+                loss_adapt = self.loss_func(logits, label)
 
                 # -- update network params
-                loss_inner.backward(create_graph=True, inputs=[params[key] for key in params if 'fc' in key])
-                params, feedbacks = OptimAdpt(params, loss_inner, logits, y, self.model.Beta, feedbacks,
+                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
+                params, feedbacks = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, feedbacks,
                                               self.model.alpha, self.model.beta, self.model.alpha_fdb,
                                               self.model.beta_fdb)
 
@@ -159,38 +193,57 @@ class Train:
                 make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                 quit()
 
-            # -- compute loss
+            # -- compute loss and accuracy
             loss_meta = self.loss_func(logits, y_qry.reshape(-1))
+            acc = self.accuracy(logits, y_qry.reshape(-1))
 
             # -- update params
             # todo: ****** check 'mrcl', see if all params are updated using the outer optimization alg at the end of
             #  the day. if so, I guess I should also use the learning rate we just learned to update it.
             self.OptimMeta.zero_grad()
             loss_meta.backward()
-            train_loss += loss_meta.item()
             self.OptimMeta.step()
 
             # -- log
-            print('Train Episode: {}\tLoss: {:.6f}\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item() / 25,
-                                                                                   self.model.alpha.detach().numpy()[0],
-                                                                                   self.model.beta.detach().numpy()[0]))
+            log(accuracy, self.res_dir + '/acc.txt')
+            log(loss, self.res_dir + '/loss.txt')
+            log([acc], self.res_dir + '/acc_meta.txt')
+            log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
+
+            print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
+                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item(), acc,
+                                                    self.model.alpha.detach().numpy()[0],
+                                                    self.model.beta.detach().numpy()[0]))
 
 
 def parse_args():
     desc = "Pytorch implementation of meta-plasticity model."
     parser = argparse.ArgumentParser(description=desc)
 
-    # -- training params
-    parser.add_argument('--episodes', type=int, default=3000, help='The number of episodes to run.')
-
     # -- meta-training params
     parser.add_argument('--dataset', type=str, default='omniglot', help='The dataset.')
+    parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
     parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
 
-    return parser.parse_args()
+    # -- log params
+    parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
+
+    args = parser.parse_args()
+
+    # -- storage settings
+    s_dir = os.getcwd()
+    args.res_dir = os.path.join(s_dir, args.res, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    os.makedirs(args.res_dir)
+
+    return check_args(args)
+
+
+def check_args(args):
+    # todo: Implement argument check.
+    return args
 
 
 def main():
