@@ -1,6 +1,8 @@
+import os
 import torch
 import warnings
 import argparse
+import datetime
 
 import numpy as np
 
@@ -11,6 +13,7 @@ from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler, Dataset
 # from kymatio.torch import Scattering2D
 
+from utils import log
 from Optim_rule import MyOptimizer as OptimAdpt
 from Dataset import EmnistDataset, OmniglotDataset, process_data
 
@@ -84,6 +87,9 @@ class Train:
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
         self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
+
+        # -- log params
+        self.res_dir = args.res_dir
 
     def load_model(self, path_pretrained):
         """
@@ -187,6 +193,11 @@ class Train:
             self.OptimMeta.step()
 
             # -- log
+            log(accuracy, self.res_dir + '/acc.txt')
+            log(loss, self.res_dir + '/loss.txt')
+            log([acc], self.res_dir + '/acc_meta.txt')
+            log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
+
             print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
                   '\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item(), acc,
                                                     self.model.alpha.detach().numpy()[0],
@@ -197,17 +208,30 @@ def parse_args():
     desc = "Pytorch implementation of meta-plasticity model."
     parser = argparse.ArgumentParser(description=desc)
 
-    # -- training params
-    parser.add_argument('--episodes', type=int, default=3000, help='The number of episodes to run.')
-
     # -- meta-training params
     parser.add_argument('--dataset', type=str, default='omniglot', help='The dataset.')
+    parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
     parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
 
-    return parser.parse_args()
+    # -- log params
+    parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
+
+    args = parser.parse_args()
+
+    # -- storage settings
+    s_dir = os.getcwd()
+    args.res_dir = os.path.join(s_dir, args.res, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    os.makedirs(args.res_dir)
+
+    return check_args(args)
+
+
+def check_args(args):
+    # todo: Implement argument check.
+    return args
 
 
 def main():
