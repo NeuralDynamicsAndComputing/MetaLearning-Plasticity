@@ -24,30 +24,41 @@ torch.manual_seed(0)
 
 
 class MyModel(nn.Module):
-    def __init__(self):
+    def __init__(self, database):
         super(MyModel, self).__init__()
+
+        self.database = database
+        if self.database == 'omniglot':
+            dim_out = 964
+        elif self.database == 'emnist':
+            dim_out = 47
+
         # -- embedding params
         self.cn1 = nn.Conv2d(1, 256, kernel_size=3, stride=2)
         self.cn2 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
         self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
         self.cn4 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
-        self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-        self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+        if self.database == 'omniglot':
+            self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+            self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
 
         # -- prediction params
         self.fc1 = nn.Linear(2304, 1700)
         self.fc2 = nn.Linear(1700, 1200)
-        self.fc3 = nn.Linear(1200, 964)
-        self.prd_dict = nn.ModuleDict({'0': self.fc1, '1': self.fc2, '2': self.fc3})
+        self.fc3 = nn.Linear(1200, dim_out)
 
-        # -- feedback todo: transpose B
-        self.feedback = nn.ParameterDict({k: nn.Parameter(m.weight.clone().detach()) for k, m in self.prd_dict.items()})
+        # -- feedback
+        # todo: two options: (1 - B_init = rand; 2 - B_init = W^T)
+        # fixme: should we add bias for feedback connections?
+        self.fk1 = nn.Linear(2304, 1700, bias=False)
+        self.fk2 = nn.Linear(1700, 1200, bias=False)
+        self.fk3 = nn.Linear(1200, dim_out, bias=False)
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100)
         self.beta = nn.Parameter(torch.rand(1) / 100)
-        self.alpha_fdb = nn.Parameter(torch.rand(1) / 100)
-        self.beta_fdb = nn.Parameter(torch.rand(1) / 100)
+        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100)
+        self.beta_fbk = nn.Parameter(torch.rand(1) / 100)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -63,10 +74,12 @@ class MyModel(nn.Module):
         y2 = self.relu(self.cn2(y1))
         y3 = self.relu(self.cn3(y2))
         y4 = self.relu(self.cn4(y3))
-        y5 = self.relu(self.cn5(y4))
-        y6 = self.relu(self.cn6(y5))
-
-        y6 = y6.view(y6 .size(0), -1)
+        if self.database == 'omniglot':
+            y5 = self.relu(self.cn5(y4))
+            y6 = self.relu(self.cn6(y5))
+            y6 = y6.view(y6.size(0), -1)
+        elif self.database == 'emnist':
+            y6 = y4.view(y4.size(0), -1)
 
         y7 = self.sopl(self.fc1(y6))
         y8 = self.sopl(self.fc2(y7))
@@ -79,7 +92,7 @@ class Train:
 
         # -- model params
         path_pretrained = './data/models/omniglot_example/model_stat.pth'
-        self.model = self.load_model(path_pretrained)
+        self.model = self.load_model(path_pretrained, args.database)
         # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
         self.softmax = nn.Softmax(dim=1)
         self.n_layers = 4  # fixme
@@ -98,13 +111,13 @@ class Train:
         # -- log params
         self.res_dir = args.res_dir
 
-    def load_model(self, path_pretrained):
+    def load_model(self, path_pretrained, database):
         """
             Loads pretrained parameters for the convolutional layers and sets adaptation and meta training flags for
             parameters.
         """
         # -- init model
-        model = MyModel()
+        model = MyModel(database)
         old_model = torch.load(path_pretrained)
         for old_key in old_model:
             dict(model.named_parameters())[old_key].data = old_model[old_key]
@@ -113,16 +126,35 @@ class Train:
         for key, val in model.named_parameters():
             if 'cn' in key:
                 val.meta, val.adapt, val.requires_grad = False, False, False
-            elif 'fc' in key or 'feedback' in key:
-                val.meta, val.adapt = True, True
+            elif 'fc' in key or 'fk' in key:
+                val.meta, val.adapt = False, True
             else:
                 val.meta, val.adapt = True, False
 
             # -- learnable params
-            if val.meta == True:
+            if val.meta is True:
                 model.params.append(val)
 
         return model
+
+    def weights_init(self, m):
+
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+
+            # -- weights
+            init_range = torch.sqrt(torch.tensor(6.0 / (m.in_features + m.out_features)))
+            m.weight.data.uniform_(-init_range, init_range)
+
+            # -- bias
+            if m.bias is not None:
+                m.bias.data.uniform_(-init_range, init_range)
+
+    def reinitialize(self):
+
+        self.model.apply(self.weights_init)
+
+        return dict(self.model.named_parameters())
 
     @staticmethod
     def accuracy(logits, label):
@@ -155,18 +187,16 @@ class Train:
 
             # -- initialize
             loss, accuracy = [], []
-            params = dict(self.model.named_parameters())
-            feedbacks = self.model.feedback
+            params = self.reinitialize()
 
             # -- training data
             x_trn, y_trn, x_qry, y_qry = process_data(data, M=self.M, K=self.K, Q=self.Q)
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
-                params = {key: param.clone() for key, param in params.items()}
+                params = {key: val.clone() for key, val in params.items()}
                 for key in params:
                     params[key].adapt = dict(self.model.named_parameters())[key].adapt
-                feedbacks = {key: B.clone() for key, B in feedbacks.items()}
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
@@ -182,9 +212,8 @@ class Train:
 
                 # -- update network params
                 loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                params, feedbacks = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, feedbacks,
-                                              self.model.alpha, self.model.beta, self.model.alpha_fdb,
-                                              self.model.beta_fdb)
+                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, self.model.alpha,
+                                              self.model.beta, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
             # -- predict
@@ -221,7 +250,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=desc)
 
     # -- meta-training params
-    parser.add_argument('--dataset', type=str, default='omniglot', help='The dataset.')
+    parser.add_argument('--database', type=str, default='omniglot', help='The database.')
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
     parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
@@ -250,9 +279,9 @@ def main():
     args = parse_args()
 
     # -- load data
-    if args.dataset == 'emnist':
+    if args.database == 'emnist':
         dataset = EmnistDataset(K=args.K, Q=args.Q)
-    elif args.dataset == 'omniglot':
+    elif args.database == 'omniglot':
         dataset = OmniglotDataset(K=args.K, Q=args.Q)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
