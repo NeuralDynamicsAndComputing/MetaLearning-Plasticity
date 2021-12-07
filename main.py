@@ -70,9 +70,11 @@ class MyModel(nn.Module):
 class Train:
     def __init__(self, meta_dataset, args):
 
+        self.device = args.device
+
         # -- model params
         path_pretrained = './data/models/omniglot_example/model_stat.pth'
-        self.model = self.load_model(path_pretrained)
+        self.model = self.load_model(path_pretrained).to(self.device)
         # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
         self.softmax = nn.Softmax(dim=1)
         self.n_layers = 4  # fixme
@@ -151,7 +153,7 @@ class Train:
             params = dict(self.model.named_parameters())
 
             # -- training data
-            x_trn, y_trn, x_qry, y_qry = process_data(data, M=self.M, K=self.K, Q=self.Q)
+            x_trn, y_trn, x_qry, y_qry = process_data(data, M=self.M, K=self.K, Q=self.Q, device=self.device)
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
@@ -208,6 +210,8 @@ def parse_args():
     desc = "Pytorch implementation of meta-plasticity model."
     parser = argparse.ArgumentParser(description=desc)
 
+    parser.add_argument('--gpu_mode', type=int, default=1, help='Accelerate the script using GPU.')
+
     # -- meta-training params
     parser.add_argument('--dataset', type=str, default='omniglot', help='The dataset.')
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
@@ -226,11 +230,17 @@ def parse_args():
     args.res_dir = os.path.join(s_dir, args.res, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     os.makedirs(args.res_dir)
 
+    # -- GPU settings
+    args.device = torch.device('cuda' if (bool(args.gpu_mode) and torch.cuda.is_available()) else 'cpu')
+
     return check_args(args)
 
 
 def check_args(args):
     # todo: Implement argument check.
+    if bool(args.gpu_mode) and not torch.cuda.is_available():
+        print('No GPUs on this device! Running on CPU.')
+
     return args
 
 
