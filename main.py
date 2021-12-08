@@ -133,7 +133,7 @@ class Train:
             # -- compute meta-loss
             _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
             loss_meta = self.loss_func(logits, y_qry.reshape(-1))
-            loss.append(loss_meta)
+            loss.append(loss_meta.item())
 
             # -- compute accuracy
             acc = self.accuracy(logits, y_qry.reshape(-1))
@@ -201,9 +201,9 @@ class Train:
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
             print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
-                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item(), acc,
-                                                    self.model.alpha.detach().numpy()[0],
-                                                    self.model.beta.detach().numpy()[0]))
+                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
+                                                    self.model.alpha.detach().cpu().numpy()[0],
+                                                    self.model.beta.detach().cpu().numpy()[0]))
 
 
 def parse_args():
