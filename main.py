@@ -83,11 +83,6 @@ class Train:
         # -- processor params
         self.device = args.device
 
-        # -- model params
-        self.path_pretrained = './data/models/omniglot_example/model_stat.pth'
-        self.model = self.load_model().to(self.device)
-        # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
-
         # -- data params
         self.database = args.database
         self.meta_dataset = meta_dataset
@@ -96,6 +91,11 @@ class Train:
         self.Q = args.Q
         self.data_process = DataProcess(M=self.M, K=self.K, Q=self.Q, database=self.database, dim=args.dim,
                                         device=self.device)
+
+        # -- model params
+        self.path_pretrained = './data/models/omniglot_example/model_stat.pth'
+        self.model = self.load_model().to(self.device)
+        # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # -- optimization params
         self.lr_meta = args.lr_meta
