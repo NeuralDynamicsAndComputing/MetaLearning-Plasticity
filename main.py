@@ -6,6 +6,7 @@ import datetime
 
 import numpy as np
 
+from git import Repo
 from torch import nn, optim
 from torchviz import make_dot
 from torch.nn import functional
@@ -268,7 +269,9 @@ def parse_args():
 
     # -- storage settings
     s_dir = os.getcwd()
-    args.res_dir = os.path.join(s_dir, args.res, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    local_repo = Repo(path=s_dir)
+    args.res_dir = os.path.join(s_dir, args.res, local_repo.active_branch.name,
+                                datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     os.makedirs(args.res_dir)
 
     # -- GPU settings
@@ -281,6 +284,11 @@ def check_args(args):
     # todo: Implement argument check.
     if bool(args.gpu_mode) and not torch.cuda.is_available():
         print('No GPUs on this device! Running on CPU.')
+
+    # -- store settings
+    with open(args.res_dir + '/args.txt', 'w') as fp:
+        for item in vars(args).items():
+            fp.write("{} : {}\n".format(item[0], item[1]))
 
     return args
 
