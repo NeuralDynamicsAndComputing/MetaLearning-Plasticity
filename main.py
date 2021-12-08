@@ -11,7 +11,7 @@ from torch import nn, optim
 from torchviz import make_dot
 from torch.nn import functional
 from torch.nn.utils import _stateless
-from torch.utils.data import DataLoader, RandomSampler, Dataset
+from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
 from utils import log
