@@ -11,7 +11,7 @@ from torch import nn, optim
 from torchviz import make_dot
 from torch.nn import functional
 from torch.nn.utils import _stateless
-from torch.utils.data import DataLoader, RandomSampler, Dataset
+from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
 from utils import log
@@ -39,9 +39,8 @@ class MyModel(nn.Module):
         self.cn2 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
         self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
         self.cn4 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
-        if self.database == 'omniglot':
-            self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-            self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+        self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+        self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
 
         # -- prediction params
         self.fc1 = nn.Linear(2304, 1700)
