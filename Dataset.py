@@ -165,14 +165,14 @@ class OmniglotDataset(Dataset):
         return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
 
 
-def process_data(data, M=5, K=5, Q=5, iid=True):
+def process_data(data, M=5, K=5, Q=5, device='cpu', iid=True):
 
     x_trn, y_trn, x_qry, y_qry = data
 
-    x_qry = torch.reshape(x_qry, (M * Q, n, n))
-    y_qry = torch.reshape(y_qry, (M * Q, 1))
-    x_trn = torch.reshape(x_trn, (M * K, n, n))
-    y_trn = torch.reshape(y_trn, (M * K, 1))
+    x_qry = torch.reshape(x_qry, (M * Q, n, n)).to(device)
+    y_qry = torch.reshape(y_qry, (M * Q, 1)).to(device)
+    x_trn = torch.reshape(x_trn, (M * K, n, n)).to(device)
+    y_trn = torch.reshape(y_trn, (M * K, 1)).to(device)
 
     if iid:
         perm = np.random.choice(range(M * K), M * K, False)
