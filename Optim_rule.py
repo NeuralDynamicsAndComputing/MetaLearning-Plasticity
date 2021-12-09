@@ -1,25 +1,23 @@
 import torch
 
 
-def my_optimizer(params, loss, logits, activation, Beta, feedback, lr, dr):
+def my_optimizer(params, loss, logits, activation, Beta, lr, dr):
     """
         One step update of the inner-loop.
     :param params:
     :param loss: loss value
     :param logits: unnormalized prediction values
     :param activation: vector of activations
-    :param Beta: smoothness coefficient for nonlinearity
-    :param feedbacks: feedback layers
+    :param Beta: smoothness coefficient for non-linearity
     :param lr: learning rate variable
     :param dr: damping rate variable
     :return:
     """
     # -- error
     e = [torch.autograd.grad(loss, logits, create_graph=True)[0]]
-    for y, layer in zip(reversed(activation), reversed(list(feedback))):
-        for k, B in layer.named_parameters():
-            if k == 'weight':
-                e.insert(0, torch.matmul(e[0], B.clone()) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
+    feedback = dict({k: v for k, v in params.items() if 'fk' in k})  # todo: add bias later
+    for y, i in zip(reversed(activation), reversed(list(feedback))):
+        e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
     # -- weight update
     i = 0

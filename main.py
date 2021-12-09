@@ -48,7 +48,9 @@ class MyModel(nn.Module):
         self.fc3 = nn.Linear(1200, dim_out)
 
         # -- feedback
-        self.feedback = nn.ModuleList([self.fc1, self.fc2, self.fc3])
+        self.fk1 = nn.Linear(2304, 1700, bias=False)
+        self.fk2 = nn.Linear(1700, 1200, bias=False)
+        self.fk3 = nn.Linear(1200, dim_out, bias=False)
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100)
@@ -122,7 +124,7 @@ class Train:
 
         # -- learning flags
         for key, val in model.named_parameters():
-            if 'cn' in key:
+            if 'cn' in key or 'fk' in key:
                 val.meta, val.adapt, val.requires_grad = False, False, False
             elif 'fc' in key:
                 val.meta, val.adapt = False, True
@@ -212,7 +214,7 @@ class Train:
 
                 # -- update network params
                 loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, self.model.feedback,
+                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta,
                                    self.model.alpha, self.model.beta)
 
             """ meta update """
