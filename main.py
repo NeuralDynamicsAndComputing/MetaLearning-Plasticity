@@ -214,7 +214,6 @@ class Train:
                 loss_adapt = self.loss_func(logits, label)
 
                 # -- update network params
-                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
                 params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, self.model.alpha, self.model.beta)
 
             """ meta update """
