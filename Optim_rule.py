@@ -26,9 +26,11 @@ def my_optimizer(params, loss, logits, activation, Beta, lr, dr):
             if k[4:] == 'weight':
                 p.update = - lr * torch.matmul(e[i+1].T, activation[i])
                 params[k] = (1 - dr) * p + p.update
+                params[k].adapt = p.adapt
             elif k[4:] == 'bias':
                 p.update = - lr * e[i+1].squeeze(0)
                 params[k] = (1 - dr) * p + p.update
+                params[k].adapt = p.adapt
 
                 i += 1
 

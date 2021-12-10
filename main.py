@@ -155,7 +155,11 @@ class Train:
 
         self.model.apply(self.weights_init)
 
-        return dict(self.model.named_parameters())
+        params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
+        for key in params:
+            params[key].adapt = dict(self.model.named_parameters())[key].adapt
+
+        return params
 
     @staticmethod
     def accuracy(logits, label):
@@ -195,9 +199,6 @@ class Train:
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
-                params = {key: val.clone() for key, val in params.items()}
-                for key in params:
-                    params[key].adapt = dict(self.model.named_parameters())[key].adapt
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
@@ -214,8 +215,7 @@ class Train:
 
                 # -- update network params
                 loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta,
-                                   self.model.alpha, self.model.beta)
+                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, self.model.alpha, self.model.beta)
 
             """ meta update """
             # -- predict
