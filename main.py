@@ -9,8 +9,8 @@ import numpy as np
 from git import Repo
 from torch import nn, optim
 from torchviz import make_dot
-from torch.nn import functional
 from torch.nn.utils import _stateless
+from torch.nn import functional as func
 from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
@@ -164,7 +164,7 @@ class Train:
     @staticmethod
     def accuracy(logits, label):
 
-        pred = functional.softmax(logits, dim=1).argmax(dim=1)
+        pred = func.softmax(logits, dim=1).argmax(dim=1)
 
         return torch.eq(pred, label).sum().item() / len(label)
 
@@ -214,7 +214,7 @@ class Train:
                 loss_adapt = self.loss_func(logits, label)
 
                 # -- update network params
-                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, self.model.alpha, self.model.beta)
+                params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
 
             """ meta update """
             # -- predict
