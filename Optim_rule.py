@@ -12,7 +12,7 @@ def my_optimizer(params, logits, label, activation, Beta, lr, dr):  # todo: remo
     :param activation: vector of activations
     :param Beta: smoothness coefficient for non-linearity
     :param lr: learning rate variable
-    :param dr: damping rate variable
+    :param dr: damping rate variable # fixme: decay rate
     :return:
     """
     # -- error
@@ -26,12 +26,12 @@ def my_optimizer(params, logits, label, activation, Beta, lr, dr):  # todo: remo
     for k, p in params.items():
         if p.adapt:
             if k[4:] == 'weight':
-                p.update = - lr * torch.matmul(e[i+1].T, activation[i])
-                params[k] = (1 - dr) * p + p.update
+                p.update = - torch.exp(lr) * torch.matmul(e[i+1].T, activation[i])
+                params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt
             elif k[4:] == 'bias':
-                p.update = - lr * e[i+1].squeeze(0)
-                params[k] = (1 - dr) * p + p.update
+                p.update = - torch.exp(lr) * e[i+1].squeeze(0)
+                params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt
 
                 i += 1

@@ -53,8 +53,8 @@ class MyModel(nn.Module):
         self.fk3 = nn.Linear(1200, dim_out, bias=False)
 
         # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100)
-        self.beta = nn.Parameter(torch.rand(1) / 100)
+        self.alpha = nn.Parameter(torch.rand(1) / 100-1)
+        self.beta = nn.Parameter(torch.rand(1) / 100-1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -240,8 +240,8 @@ class Train:
 
             print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
                   '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
-                                                    self.model.alpha.detach().cpu().numpy()[0],
-                                                    self.model.beta.detach().cpu().numpy()[0]))
+                                                    torch.exp(self.model.alpha).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0]))
 
 
 def parse_args():
