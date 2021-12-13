@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
-from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer_derive as OptimAdptDerv
+from Optim_rule import my_optimizer as OptimAdpt
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -39,17 +39,26 @@ class MyModel(nn.Module):
         self.cn2 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
         self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
         self.cn4 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
-        self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-        self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+        if self.database == 'omniglot':
+            self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+            self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
 
         # -- prediction params
         self.fc1 = nn.Linear(2304, 1700)
         self.fc2 = nn.Linear(1700, 1200)
         self.fc3 = nn.Linear(1200, dim_out)
 
+        # -- feedback
+        # todo: two options: (1 - B_init = rand; 2 - B_init = W^T)
+        self.fk1 = nn.Linear(2304, 1700, bias=False)
+        self.fk2 = nn.Linear(1700, 1200, bias=False)
+        self.fk3 = nn.Linear(1200, dim_out, bias=False)
+
         # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100-1)
-        self.beta = nn.Parameter(torch.rand(1) / 100-1)
+        self.alpha = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -121,7 +130,7 @@ class Train:
         for key, val in model.named_parameters():
             if 'cn' in key:
                 val.meta, val.adapt, val.requires_grad = False, False, False
-            elif 'fc' in key:
+            elif 'fc' in key or 'fk' in key:
                 val.meta, val.adapt = False, True
             else:
                 val.meta, val.adapt = True, False
@@ -131,6 +140,25 @@ class Train:
                 model.params.append(val)
 
         return model
+
+    def weights_init(self, m):
+
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+
+            # -- weights
+            init_range = torch.sqrt(torch.tensor(6.0 / (m.in_features + m.out_features)))
+            m.weight.data.uniform_(-init_range, init_range)
+
+            # -- bias
+            if m.bias is not None:
+                m.bias.data.uniform_(-init_range, init_range)
+
+    def reinitialize(self):
+
+        self.model.apply(self.weights_init)
+
+        return dict(self.model.named_parameters())
 
     @staticmethod
     def weights_init(m):
@@ -206,12 +234,8 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = OptimAdptDerv(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
-
-                # -- Use the following for sanity check
-                # loss_adapt = self.loss_func(logits, label)
-                # loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                # params = OptimAdptAuto(params, self.model.alpha, self.model.beta)
+                params = OptimAdpt(params, logits, y, self.model.Beta, self.model.alpha,
+                                              self.model.beta, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
             # -- predict
@@ -238,7 +262,9 @@ class Train:
             print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
                   '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
                                                     torch.exp(self.model.alpha).detach().cpu().numpy()[0],
-                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0]))
+                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
 
 
 def parse_args():
@@ -253,7 +279,7 @@ def parse_args():
 
     # -- meta-training params
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
+    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
