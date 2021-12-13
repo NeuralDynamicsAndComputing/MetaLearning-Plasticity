@@ -210,9 +210,6 @@ class Train:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                     quit()
 
-                # -- compute loss
-                loss_adapt = self.loss_func(logits, label)
-
                 # -- update network params
                 params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
 
