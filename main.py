@@ -15,8 +15,8 @@ from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
 from utils import log
-from Optim_rule import my_optimizer as OptimAdpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
+from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer_derive as OptimAdptDerv
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -46,11 +46,6 @@ class MyModel(nn.Module):
         self.fc1 = nn.Linear(2304, 1700)
         self.fc2 = nn.Linear(1700, 1200)
         self.fc3 = nn.Linear(1200, dim_out)
-
-        # -- feedback
-        self.fk1 = nn.Linear(2304, 1700, bias=False)
-        self.fk2 = nn.Linear(1700, 1200, bias=False)
-        self.fk3 = nn.Linear(1200, dim_out, bias=False)
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100-1)
@@ -124,7 +119,7 @@ class Train:
 
         # -- learning flags
         for key, val in model.named_parameters():
-            if 'cn' in key or 'fk' in key:
+            if 'cn' in key:
                 val.meta, val.adapt, val.requires_grad = False, False, False
             elif 'fc' in key:
                 val.meta, val.adapt = False, True
@@ -211,7 +206,12 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
+                params = OptimAdptDerv(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
+
+                # todo: use the following for sanity check
+                # loss_adapt = self.loss_func(logits, label)
+                # loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
+                # params = OptimAdptAuto(params, self.model.alpha, self.model.beta)
 
             """ meta update """
             # -- predict
@@ -253,7 +253,7 @@ def parse_args():
 
     # -- meta-training params
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
+    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
