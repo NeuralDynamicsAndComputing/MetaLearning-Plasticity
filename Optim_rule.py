@@ -8,7 +8,7 @@ def my_optimizer_auto(params, lr, dr):
         One step update of the inner-loop (autograd).
     :param params: model parameters
     :param lr: learning rate variable
-    :param dr: decay rate variable # fixme: decay rate
+    :param dr: decay rate variable
     :return:
     """
     for k, p in params.items():
@@ -18,6 +18,7 @@ def my_optimizer_auto(params, lr, dr):
             params[k].adapt = p.adapt
 
     return params
+
 
 def my_optimizer_derive(params, logits, label, activation, Beta, lr, dr):  # todo: remove loss
     """

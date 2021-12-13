@@ -208,7 +208,7 @@ class Train:
                 # -- update network params
                 params = OptimAdptDerv(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
 
-                # todo: use the following for sanity check
+                # -- Use the following for sanity check
                 # loss_adapt = self.loss_func(logits, label)
                 # loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
                 # params = OptimAdptAuto(params, self.model.alpha, self.model.beta)
