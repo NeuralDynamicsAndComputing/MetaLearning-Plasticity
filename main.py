@@ -48,7 +48,6 @@ class MyModel(nn.Module):
         self.fc3 = nn.Linear(1200, dim_out)
 
         # -- feedback
-        # todo: two options: (1 - B_init = rand; 2 - B_init = W^T)
         self.fk1 = nn.Linear(2304, 1700, bias=False)
         self.fk2 = nn.Linear(1700, 1200, bias=False)
         self.fk3 = nn.Linear(1200, dim_out, bias=False)
@@ -158,25 +157,7 @@ class Train:
 
         self.model.apply(self.weights_init)
 
-        return dict(self.model.named_parameters())
-
-    @staticmethod
-    def weights_init(m):
-
-        classname = m.__class__.__name__
-        if classname.find('Linear') != -1:
-
-            # -- weights
-            init_range = torch.sqrt(torch.tensor(6.0 / (m.in_features + m.out_features)))
-            m.weight.data.uniform_(-init_range, init_range)
-
-            # -- bias
-            if m.bias is not None:
-                m.bias.data.uniform_(-init_range, init_range)
-
-    def reinitialize(self):
-
-        self.model.apply(self.weights_init)
+        # todo: two options: (1 - B_init = rand; 2 - B_init = W^T)
 
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
         for key in params:
@@ -234,7 +215,7 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = OptimAdpt(params, logits, y, self.model.Beta, self.model.alpha,
+                params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha,
                                               self.model.beta, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
@@ -259,8 +240,8 @@ class Train:
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
-            print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
-                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
+            print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}\tlr (W): {:.6f}\tdr (W): {:.6f}'
+                  '\tlr (B): {:.6f}\tdr (B): {:.6f}'.format(eps+1, loss_meta.item(), acc,
                                                     torch.exp(self.model.alpha).detach().cpu().numpy()[0],
                                                     torch.exp(self.model.beta).detach().cpu().numpy()[0],
                                                     torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
