@@ -103,6 +103,7 @@ class Train:
         # -- model params
         self.path_pretrained = './data/models/omniglot_example/model_stat.pth'
         self.model = self.load_model().to(self.device)
+        self.B_init = args.B_init
         # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # -- optimization params
@@ -157,7 +158,10 @@ class Train:
 
         self.model.apply(self.weights_init)
 
-        # todo: two options: (1 - B_init = rand; 2 - B_init = W^T)
+        if self.B_init == 'W':  # todo: avoid manually initializing B.
+            self.model.fk1.weight.data = self.model.fc1.weight.data
+            self.model.fk2.weight.data = self.model.fc2.weight.data
+            self.model.fk3.weight.data = self.model.fc3.weight.data
 
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
         for key in params:
@@ -267,6 +271,10 @@ def parse_args():
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
+
+    # -- model params
+    parser.add_argument('--B_init', type=str, default='W',
+                        help='Feedback initial value: 1) B_init = rand; 2) B_init = W^T.')
 
     args = parser.parse_args()
 
