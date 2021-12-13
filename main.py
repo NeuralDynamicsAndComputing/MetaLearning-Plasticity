@@ -9,14 +9,14 @@ import numpy as np
 from git import Repo
 from torch import nn, optim
 from torchviz import make_dot
-from torch.nn import functional
 from torch.nn.utils import _stateless
+from torch.nn import functional as func
 from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
 from utils import log
-from Optim_rule import my_optimizer as OptimAdpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
+from Optim_rule import my_optimizer as OptimAdpt
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -49,16 +49,15 @@ class MyModel(nn.Module):
 
         # -- feedback
         # todo: two options: (1 - B_init = rand; 2 - B_init = W^T)
-        # fixme: should we add bias for feedback connections?
         self.fk1 = nn.Linear(2304, 1700, bias=False)
         self.fk2 = nn.Linear(1700, 1200, bias=False)
         self.fk3 = nn.Linear(1200, dim_out, bias=False)
 
         # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100)
-        self.beta = nn.Parameter(torch.rand(1) / 100)
-        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100)
-        self.beta_fbk = nn.Parameter(torch.rand(1) / 100)
+        self.alpha = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -115,7 +114,6 @@ class Train:
         # -- log params
         self.res_dir = args.res_dir
 
-
     def load_model(self):
         """
             Loads pretrained parameters for the convolutional layers and sets adaptation and meta training flags for
@@ -163,9 +161,33 @@ class Train:
         return dict(self.model.named_parameters())
 
     @staticmethod
+    def weights_init(m):
+
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+
+            # -- weights
+            init_range = torch.sqrt(torch.tensor(6.0 / (m.in_features + m.out_features)))
+            m.weight.data.uniform_(-init_range, init_range)
+
+            # -- bias
+            if m.bias is not None:
+                m.bias.data.uniform_(-init_range, init_range)
+
+    def reinitialize(self):
+
+        self.model.apply(self.weights_init)
+
+        params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
+        for key in params:
+            params[key].adapt = dict(self.model.named_parameters())[key].adapt
+
+        return params
+
+    @staticmethod
     def accuracy(logits, label):
 
-        pred = functional.softmax(logits, dim=1).argmax(dim=1)
+        pred = func.softmax(logits, dim=1).argmax(dim=1)
 
         return torch.eq(pred, label).sum().item() / len(label)
 
@@ -200,25 +222,19 @@ class Train:
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
-                params = {key: val.clone() for key, val in params.items()}
-                for key in params:
-                    params[key].adapt = dict(self.model.named_parameters())[key].adapt
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
 
                 # -- predict
                 y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
+
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                     quit()
 
-                # -- compute loss
-                loss_adapt = self.loss_func(logits, label)
-
                 # -- update network params
-                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, self.model.alpha,
+                params = OptimAdpt(params, logits, y, self.model.Beta, self.model.alpha,
                                               self.model.beta, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
@@ -233,8 +249,6 @@ class Train:
             acc = self.accuracy(logits, y_qry.reshape(-1))
 
             # -- update params
-            # todo: ****** check 'mrcl', see if all params are updated using the outer optimization alg at the end of
-            #  the day. if so, I guess I should also use the learning rate we just learned to update it.
             self.OptimMeta.zero_grad()
             loss_meta.backward()
             self.OptimMeta.step()
@@ -247,8 +261,10 @@ class Train:
 
             print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
                   '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
-                                                    self.model.alpha.detach().cpu().numpy()[0],
-                                                    self.model.beta.detach().cpu().numpy()[0]))
+                                                    torch.exp(self.model.alpha).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
 
 
 def parse_args():
@@ -263,10 +279,10 @@ def parse_args():
 
     # -- meta-training params
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
+    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
+    parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
