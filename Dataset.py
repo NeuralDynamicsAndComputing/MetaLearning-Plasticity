@@ -11,9 +11,6 @@ from torch.utils.data import Dataset
 import numpy as np
 import torchvision.transforms as transforms
 
-n = 84
-nxn = n * n
-
 
 class EmnistDataset(Dataset):
     def __init__(self, K, Q=5):
@@ -116,7 +113,7 @@ class EmnistDataset(Dataset):
 
 
 class OmniglotDataset(Dataset):
-    def __init__(self, K, Q=5):
+    def __init__(self, K, Q=5, dim=84):
         try:
             # -- create directory
             s_dir = os.getcwd()
@@ -140,7 +137,7 @@ class OmniglotDataset(Dataset):
 
         # --
         self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders]
-        self.transform = transforms.Compose([transforms.Resize((n, n)), transforms.ToTensor()])
+        self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
 
     @staticmethod
     def download(url, filename):
@@ -165,19 +162,29 @@ class OmniglotDataset(Dataset):
         return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
 
 
-def process_data(data, M=5, K=5, Q=5, iid=True):
+class DataProcess:
+    def __init__(self, M, K, Q, database, dim, device='cpu', iid=True):
+        self.M = M
+        self.K = K
+        self.Q = Q
+        self.database = database
+        self.device = device
+        self.iid = iid
+        self.dim = dim
 
-    x_trn, y_trn, x_qry, y_qry = data
+    def __call__(self, data):
 
-    x_qry = torch.reshape(x_qry, (M * Q, n, n))
-    y_qry = torch.reshape(y_qry, (M * Q, 1))
-    x_trn = torch.reshape(x_trn, (M * K, n, n))
-    y_trn = torch.reshape(y_trn, (M * K, 1))
+        x_trn, y_trn, x_qry, y_qry = data
 
-    if iid:
-        perm = np.random.choice(range(M * K), M * K, False)
+        x_trn = torch.reshape(x_trn, (self.M * self.K, self.dim, self.dim)).to(self.device)
+        y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
+        x_qry = torch.reshape(x_qry, (self.M * self.Q, self.dim, self.dim)).to(self.device)
+        y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
 
-        x_trn = x_trn[perm]
-        y_trn = y_trn[perm]
+        if self.iid:
+            perm = np.random.choice(range(self.M * self.K), self.M * self.K, False)
 
-    return x_trn, y_trn, x_qry, y_qry
+            x_trn = x_trn[perm]
+            y_trn = y_trn[perm]
+
+        return x_trn, y_trn, x_qry, y_qry

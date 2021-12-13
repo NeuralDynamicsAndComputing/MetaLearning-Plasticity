@@ -6,16 +6,17 @@ import datetime
 
 import numpy as np
 
+from git import Repo
 from torch import nn, optim
 from torchviz import make_dot
-from torch.nn import functional
 from torch.nn.utils import _stateless
-from torch.utils.data import DataLoader, RandomSampler, Dataset
+from torch.nn import functional as func
+from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
 from utils import log
+from Dataset import EmnistDataset, OmniglotDataset, DataProcess
 from Optim_rule import my_optimizer as OptimAdpt
-from Dataset import EmnistDataset, OmniglotDataset, process_data
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -49,16 +50,15 @@ class MyModel(nn.Module):
 
         # -- feedback
         # todo: two options: (1 - B_init = rand; 2 - B_init = W^T)
-        # fixme: should we add bias for feedback connections?
         self.fk1 = nn.Linear(2304, 1700, bias=False)
         self.fk2 = nn.Linear(1700, 1200, bias=False)
         self.fk3 = nn.Linear(1200, dim_out, bias=False)
 
         # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100)
-        self.beta = nn.Parameter(torch.rand(1) / 100)
-        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100)
-        self.beta_fbk = nn.Parameter(torch.rand(1) / 100)
+        self.alpha = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -90,18 +90,22 @@ class MyModel(nn.Module):
 class Train:
     def __init__(self, meta_dataset, args):
 
-        # -- model params
-        path_pretrained = './data/models/omniglot_example/model_stat.pth'
-        self.model = self.load_model(path_pretrained, args.database)
-        # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
-        self.softmax = nn.Softmax(dim=1)
-        self.n_layers = 4  # fixme
+        # -- processor params
+        self.device = args.device
 
         # -- data params
+        self.database = args.database
         self.meta_dataset = meta_dataset
         self.M = args.M
         self.K = args.K
         self.Q = args.Q
+        self.data_process = DataProcess(M=self.M, K=self.K, Q=self.Q, database=self.database, dim=args.dim,
+                                        device=self.device)
+
+        # -- model params
+        self.path_pretrained = './data/models/omniglot_example/model_stat.pth'
+        self.model = self.load_model().to(self.device)
+        # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # -- optimization params
         self.lr_meta = args.lr_meta
@@ -111,14 +115,14 @@ class Train:
         # -- log params
         self.res_dir = args.res_dir
 
-    def load_model(self, path_pretrained, database):
+    def load_model(self):
         """
             Loads pretrained parameters for the convolutional layers and sets adaptation and meta training flags for
             parameters.
         """
         # -- init model
-        model = MyModel(database)
-        old_model = torch.load(path_pretrained)
+        model = MyModel(self.database)
+        old_model = torch.load(self.path_pretrained)
         for old_key in old_model:
             dict(model.named_parameters())[old_key].data = old_model[old_key]
 
@@ -157,9 +161,33 @@ class Train:
         return dict(self.model.named_parameters())
 
     @staticmethod
+    def weights_init(m):
+
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+
+            # -- weights
+            init_range = torch.sqrt(torch.tensor(6.0 / (m.in_features + m.out_features)))
+            m.weight.data.uniform_(-init_range, init_range)
+
+            # -- bias
+            if m.bias is not None:
+                m.bias.data.uniform_(-init_range, init_range)
+
+    def reinitialize(self):
+
+        self.model.apply(self.weights_init)
+
+        params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
+        for key in params:
+            params[key].adapt = dict(self.model.named_parameters())[key].adapt
+
+        return params
+
+    @staticmethod
     def accuracy(logits, label):
 
-        pred = functional.softmax(logits, dim=1).argmax(dim=1)
+        pred = func.softmax(logits, dim=1).argmax(dim=1)
 
         return torch.eq(pred, label).sum().item() / len(label)
 
@@ -170,7 +198,7 @@ class Train:
             # -- compute meta-loss
             _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
             loss_meta = self.loss_func(logits, y_qry.reshape(-1))
-            loss.append(loss_meta)
+            loss.append(loss_meta.item())
 
             # -- compute accuracy
             acc = self.accuracy(logits, y_qry.reshape(-1))
@@ -190,29 +218,23 @@ class Train:
             params = self.reinitialize()
 
             # -- training data
-            x_trn, y_trn, x_qry, y_qry = process_data(data, M=self.M, K=self.K, Q=self.Q)
+            x_trn, y_trn, x_qry, y_qry = self.data_process(data)
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
-                params = {key: val.clone() for key, val in params.items()}
-                for key in params:
-                    params[key].adapt = dict(self.model.named_parameters())[key].adapt
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
 
                 # -- predict
                 y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
+
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                     quit()
 
-                # -- compute loss
-                loss_adapt = self.loss_func(logits, label)
-
                 # -- update network params
-                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                params = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, self.model.alpha,
+                params = OptimAdpt(params, logits, y, self.model.Beta, self.model.alpha,
                                               self.model.beta, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
@@ -227,8 +249,6 @@ class Train:
             acc = self.accuracy(logits, y_qry.reshape(-1))
 
             # -- update params
-            # todo: ****** check 'mrcl', see if all params are updated using the outer optimization alg at the end of
-            #  the day. if so, I guess I should also use the learning rate we just learned to update it.
             self.OptimMeta.zero_grad()
             loss_meta.backward()
             self.OptimMeta.step()
@@ -240,22 +260,29 @@ class Train:
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
             print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
-                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps, loss_meta.item(), acc,
-                                                    self.model.alpha.detach().numpy()[0],
-                                                    self.model.beta.detach().numpy()[0]))
+                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
+                                                    torch.exp(self.model.alpha).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
 
 
 def parse_args():
     desc = "Pytorch implementation of meta-plasticity model."
     parser = argparse.ArgumentParser(description=desc)
 
+    parser.add_argument('--gpu_mode', type=int, default=1, help='Accelerate the script using GPU.')
+
+    # -- data params
+    parser.add_argument('--database', type=str, default='emnist', help='The database.')
+    parser.add_argument('--dim', type=int, default=28, help='The dimension of the training data.')
+
     # -- meta-training params
-    parser.add_argument('--database', type=str, default='omniglot', help='The database.')
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
+    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
+    parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
@@ -264,14 +291,27 @@ def parse_args():
 
     # -- storage settings
     s_dir = os.getcwd()
-    args.res_dir = os.path.join(s_dir, args.res, datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    local_repo = Repo(path=s_dir)
+    args.res_dir = os.path.join(s_dir, args.res, local_repo.active_branch.name,
+                                datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
     os.makedirs(args.res_dir)
+
+    # -- GPU settings
+    args.device = torch.device('cuda' if (bool(args.gpu_mode) and torch.cuda.is_available()) else 'cpu')
 
     return check_args(args)
 
 
 def check_args(args):
     # todo: Implement argument check.
+    if bool(args.gpu_mode) and not torch.cuda.is_available():
+        print('No GPUs on this device! Running on CPU.')
+
+    # -- store settings
+    with open(args.res_dir + '/args.txt', 'w') as fp:
+        for item in vars(args).items():
+            fp.write("{} : {}\n".format(item[0], item[1]))
+
     return args
 
 
@@ -282,7 +322,7 @@ def main():
     if args.database == 'emnist':
         dataset = EmnistDataset(K=args.K, Q=args.Q)
     elif args.database == 'omniglot':
-        dataset = OmniglotDataset(K=args.K, Q=args.Q)
+        dataset = OmniglotDataset(K=args.K, Q=args.Q, dim=args.dim)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
