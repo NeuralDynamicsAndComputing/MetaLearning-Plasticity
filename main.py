@@ -222,7 +222,7 @@ class Train:
 
                 # -- update network params
                 params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha_fwd,
-                                              self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk)
+                                   self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
             # -- predict
