@@ -27,11 +27,11 @@ def my_optimizer(params, logits, label, activation, Beta, lr_fwd, dr_fwd, lr_fdk
     i = 0
     for k, p in params.items():
         if p.adapt and 'fc' in k:
-            if k[4:] == 'weight':
+            if 'weight' in k:
                 p.update = - torch.exp(lr_fwd) * torch.matmul(e[i + 1].T, activation[i])
                 params[k] = (1 - torch.exp(dr_fwd)) * p + p.update
                 params[k].adapt = p.adapt
-            elif k[4:] == 'bias':
+            elif 'bias' in k:
                 p.update = - torch.exp(lr_fwd) * e[i + 1].squeeze(0)
                 params[k] = (1 - torch.exp(dr_fwd)) * p + p.update
                 params[k].adapt = p.adapt
