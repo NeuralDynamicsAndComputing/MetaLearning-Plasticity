@@ -15,8 +15,8 @@ from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
 from utils import log
-from Dataset import EmnistDataset, OmniglotDataset, DataProcess
 from Optim_rule import my_optimizer as OptimAdpt
+from Dataset import EmnistDataset, OmniglotDataset, DataProcess
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -254,8 +254,8 @@ class Train:
                   '\tlr (B): {:.6f}\tdr (B): {:.6f}'.format(eps+1, loss_meta.item(), acc,
                                                     torch.exp(self.model.alpha).detach().cpu().numpy()[0],
                                                     torch.exp(self.model.beta).detach().cpu().numpy()[0],
-                                                    torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
-                                                    torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
+                                                            torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
+                                                            torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
 
 
 def parse_args():
