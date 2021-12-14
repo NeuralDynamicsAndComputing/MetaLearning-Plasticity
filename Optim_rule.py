@@ -40,9 +40,8 @@ def my_optimizer(params, logits, label, activation, Beta, lr_fwd, dr_fwd, lr_fdk
 
     # -- feedback update
     for i, (k, B) in enumerate(feedback.items()):
-        B.update = - torch.exp(lr_fdk) * torch.matmul(e[i+1].T, activation[i])
-        tmp = params[k].adapt  # todo: needs to be fixed
+        B.update = - torch.exp(lr_fdk) * torch.matmul(e[i + 1].T, activation[i])
         params[k] = (1 - torch.exp(dr_fdk)) * B + B.update
-        params[k].adapt = tmp
+        params[k].adapt = B.adapt
         
     return params
