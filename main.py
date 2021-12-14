@@ -95,10 +95,7 @@ class Train:
         # -- data params
         self.database = args.database
         self.meta_dataset = meta_dataset
-        self.M = args.M
-        self.K = args.K
-        self.Q = args.Q
-        self.data_process = DataProcess(M=self.M, K=self.K, Q=self.Q, database=self.database, dim=args.dim,
+        self.data_process = DataProcess(M=args.M, K=args.K, Q=args.Q, database=self.database, dim=args.dim,
                                         device=self.device)
 
         # -- model params
