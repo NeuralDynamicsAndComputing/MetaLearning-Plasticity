@@ -9,14 +9,14 @@ import numpy as np
 from git import Repo
 from torch import nn, optim
 from torchviz import make_dot
-from torch.nn import functional
 from torch.nn.utils import _stateless
+from torch.nn import functional as func
 from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
 from utils import log
-from Optim_rule import my_optimizer as OptimAdpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
+from Optim_rule import my_optimizer as OptimAdpt
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -51,11 +51,16 @@ class MyModel(nn.Module):
         # -- feedback todo: transpose B
         self.feedback = nn.ParameterDict({k: nn.Parameter(m.weight.clone().detach()) for k, m in self.prd_dict.items()})
 
+        # -- feedback
+        self.fk1 = nn.Linear(2304, 1700, bias=False)
+        self.fk2 = nn.Linear(1700, 1200, bias=False)
+        self.fk3 = nn.Linear(1200, dim_out, bias=False)
+
         # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100)
-        self.beta = nn.Parameter(torch.rand(1) / 100)
-        self.alpha_fdb = nn.Parameter(torch.rand(1) / 100)
-        self.beta_fdb = nn.Parameter(torch.rand(1) / 100)
+        self.alpha = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -102,6 +107,7 @@ class Train:
         # -- model params
         self.path_pretrained = './data/models/omniglot_example/model_stat.pth'
         self.model = self.load_model().to(self.device)
+        self.B_init = args.B_init
         # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # -- optimization params
@@ -127,8 +133,8 @@ class Train:
         for key, val in model.named_parameters():
             if 'cn' in key:
                 val.meta, val.adapt, val.requires_grad = False, False, False
-            elif 'fc' in key or 'feedback' in key:
-                val.meta, val.adapt = True, True
+            elif 'fc' in key or 'fk' in key:
+                val.meta, val.adapt = False, True
             else:
                 val.meta, val.adapt = True, False
 
@@ -139,9 +145,38 @@ class Train:
         return model
 
     @staticmethod
+    def weights_init(m):
+
+        classname = m.__class__.__name__
+        if classname.find('Linear') != -1:
+
+            # -- weights
+            init_range = torch.sqrt(torch.tensor(6.0 / (m.in_features + m.out_features)))
+            m.weight.data.uniform_(-init_range, init_range)
+
+            # -- bias
+            if m.bias is not None:
+                m.bias.data.uniform_(-init_range, init_range)
+
+    def reinitialize(self):
+
+        self.model.apply(self.weights_init)
+
+        if self.B_init == 'W':  # todo: avoid manually initializing B.
+            self.model.fk1.weight.data = self.model.fc1.weight.data
+            self.model.fk2.weight.data = self.model.fc2.weight.data
+            self.model.fk3.weight.data = self.model.fc3.weight.data
+
+        params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
+        for key in params:
+            params[key].adapt = dict(self.model.named_parameters())[key].adapt
+
+        return params
+
+    @staticmethod
     def accuracy(logits, label):
 
-        pred = functional.softmax(logits, dim=1).argmax(dim=1)
+        pred = func.softmax(logits, dim=1).argmax(dim=1)
 
         return torch.eq(pred, label).sum().item() / len(label)
 
@@ -169,36 +204,27 @@ class Train:
 
             # -- initialize
             loss, accuracy = [], []
-            params = dict(self.model.named_parameters())
-            feedbacks = self.model.feedback
+            params = self.reinitialize()
 
             # -- training data
             x_trn, y_trn, x_qry, y_qry = self.data_process(data)
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
-                params = {key: param.clone() for key, param in params.items()}
-                for key in params:
-                    params[key].adapt = dict(self.model.named_parameters())[key].adapt
-                feedbacks = {key: B.clone() for key, B in feedbacks.items()}
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
 
                 # -- predict
                 y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
+
                 if False:
                     make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
                     quit()
 
-                # -- compute loss
-                loss_adapt = self.loss_func(logits, label)
-
                 # -- update network params
-                loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                params, feedbacks = OptimAdpt(params, loss_adapt, logits, y, self.model.Beta, feedbacks,
-                                              self.model.alpha, self.model.beta, self.model.alpha_fdb,
-                                              self.model.beta_fdb)
+                params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha,
+                                              self.model.beta, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
             # -- predict
@@ -224,10 +250,12 @@ class Train:
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
-            print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
-                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
-                                                    self.model.alpha.detach().cpu().numpy()[0],
-                                                    self.model.beta.detach().cpu().numpy()[0]))
+            print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}\tlr (W): {:.6f}\tdr (W): {:.6f}'
+                  '\tlr (B): {:.6f}\tdr (B): {:.6f}'.format(eps+1, loss_meta.item(), acc,
+                                                    torch.exp(self.model.alpha).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
+                                                    torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
 
 
 def parse_args():
@@ -242,13 +270,17 @@ def parse_args():
 
     # -- meta-training params
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
+    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
+    parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
+
+    # -- model params
+    parser.add_argument('--B_init', type=str, default='W',
+                        help='Feedback initial value: 1) B_init = rand; 2) B_init = W^T.')
 
     args = parser.parse_args()
 
