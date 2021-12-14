@@ -64,7 +64,8 @@ class MyModel(nn.Module):
         self.sopl = nn.Softplus(beta=self.Beta)
 
         # -- learnable params
-        self.params = nn.ParameterList()
+        self.params_fwd = nn.ParameterList()
+        self.params_fbk = nn.ParameterList()
 
     def forward(self, x):
 
@@ -107,9 +108,9 @@ class Train:
         # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # -- optimization params
-        self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
+        self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
+                                     {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
 
         # -- log params
         self.res_dir = args.res_dir
@@ -128,15 +129,19 @@ class Train:
         # -- learning flags
         for key, val in model.named_parameters():
             if 'cn' in key:
-                val.meta, val.adapt, val.requires_grad = False, False, False
+                val.meta_fwd, val.meta_fbk, val.adapt, val.requires_grad = False, False, False, False
             elif 'fc' in key or 'fk' in key:
-                val.meta, val.adapt = False, True
-            else:
-                val.meta, val.adapt = True, False
+                val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
+            elif 'fwd' in key:
+                val.meta_fwd, val.meta_fbk, val.adapt = True, False, False
+            elif 'fbk' in key:
+                val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
 
             # -- learnable params
-            if val.meta is True:
-                model.params.append(val)
+            if val.meta_fwd is True:
+                model.params_fwd.append(val)
+            elif val.meta_fbk is True:
+                model.params_fbk.append(val)
 
         return model
 
@@ -267,7 +272,8 @@ def parse_args():
     parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
+    parser.add_argument('--lr_meta_fwd', type=float, default=5e-2, help='.')
+    parser.add_argument('--lr_meta_fbk', type=float, default=5e-2, help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
