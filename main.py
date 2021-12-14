@@ -46,6 +46,10 @@ class MyModel(nn.Module):
         self.fc1 = nn.Linear(2304, 1700)
         self.fc2 = nn.Linear(1700, 1200)
         self.fc3 = nn.Linear(1200, dim_out)
+        self.prd_dict = nn.ModuleDict({'0': self.fc1, '1': self.fc2, '2': self.fc3})
+
+        # -- feedback todo: transpose B
+        self.feedback = nn.ParameterDict({k: nn.Parameter(m.weight.clone().detach()) for k, m in self.prd_dict.items()})
 
         # -- feedback
         self.fk1 = nn.Linear(2304, 1700, bias=False)
@@ -234,6 +238,8 @@ class Train:
             acc = self.accuracy(logits, y_qry.reshape(-1))
 
             # -- update params
+            # todo: ****** check 'mrcl', see if all params are updated using the outer optimization alg at the end of
+            #  the day. if so, I guess I should also use the learning rate we just learned to update it.
             self.OptimMeta.zero_grad()
             loss_meta.backward()
             self.OptimMeta.step()
