@@ -304,6 +304,8 @@ def check_args(args):
         for item in vars(args).items():
             fp.write("{} : {}\n".format(item[0], item[1]))
 
+    # todo: throw error : B_init \in {'W', 'rand'}
+
     return args
 
 
