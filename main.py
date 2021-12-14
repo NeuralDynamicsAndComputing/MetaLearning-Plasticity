@@ -277,7 +277,7 @@ def parse_args():
 
     # -- model params
     parser.add_argument('--B_init', type=str, default='W',
-                        help='Feedback initial value: 1) B_init = rand; 2) B_init = W^T.')
+                        help='Feedback initialization method: 1) B_init.T = rand; 2) B_init.T = W.')
 
     args = parser.parse_args()
 
