@@ -57,8 +57,8 @@ class MyModel(nn.Module):
         self.fk3 = nn.Linear(1200, dim_out, bias=False)
 
         # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.beta = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.alpha_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
@@ -223,8 +223,8 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha,
-                                              self.model.beta, self.model.alpha_fbk, self.model.beta_fbk)
+                params = OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha_fwd,
+                                              self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk)
 
             """ meta update """
             # -- predict
@@ -252,8 +252,8 @@ class Train:
 
             print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}\tlr (W): {:.6f}\tdr (W): {:.6f}'
                   '\tlr (B): {:.6f}\tdr (B): {:.6f}'.format(eps+1, loss_meta.item(), acc,
-                                                    torch.exp(self.model.alpha).detach().cpu().numpy()[0],
-                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0],
+                                                            torch.exp(self.model.alpha_fwd).detach().cpu().numpy()[0],
+                                                            torch.exp(self.model.beta_fwd).detach().cpu().numpy()[0],
                                                             torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
                                                             torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
 
