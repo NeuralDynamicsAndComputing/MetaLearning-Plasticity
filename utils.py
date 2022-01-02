@@ -2,6 +2,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
+import torch
 from torch import nn, optim
 
 import torchvision
@@ -21,10 +22,14 @@ class MyModel(nn.Module):
         dim_out = 964
 
         # -- embedding params
-        self.cn1 = nn.Conv2d(1, 256, kernel_size=3, stride=2)
-        self.cn2 = nn.Conv2d(256, 256, kernel_size=4, stride=1)
-        self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-        self.cn4 = nn.Conv2d(256, 256, kernel_size=4, stride=1)
+        self.cn1 = nn.Conv2d(1, 16, 7)
+        self.cn2 = nn.Conv2d(16, 32, 4)
+        self.cn3 = nn.Conv2d(32, 64, 3)
+        self.pool = nn.MaxPool2d(2)
+
+        self.bn1 = nn.BatchNorm2d(16)
+        self.bn2 = nn.BatchNorm2d(32)
+        self.bn3 = nn.BatchNorm2d(64)
 
         # -- prediction params
         self.fc1 = nn.Linear(256, 170)
@@ -38,14 +43,14 @@ class MyModel(nn.Module):
 
     def forward(self, x):
 
-        y1 = self.relu(self.cn1(x))
-        y2 = self.relu(self.cn2(y1))
-        y3 = self.relu(self.cn3(y2))
-        y4 = self.relu(self.cn4(y3))
+        y1 = self.pool(self.bn1(self.relu(self.cn1(x))))
+        y2 = self.pool(self.bn2(self.relu(self.cn2(y1))))
+        y3 = self.relu(self.bn3(self.cn3(y2)))
 
-        y4 = y4.view(y4.size(0), -1)
 
-        y5 = self.sopl(self.fc1(y4))
+        y3 = y3.view(y3.size(0), -1)
+
+        y5 = self.sopl(self.fc1(y3))
         y6 = self.sopl(self.fc2(y5))
 
         return self.fc3(y6)
@@ -54,9 +59,11 @@ class MyModel(nn.Module):
 class Train:
     def __init__(self):
 
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
         # -- data
         dim = 28
-        batch_size = 40
+        batch_size = 400
         my_transforms = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
         dataset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", download=False, transform=my_transforms)
         self.testset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", background=False, download=False,
@@ -64,7 +71,7 @@ class Train:
         self.TrainDataset = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
 
         # -- model
-        self.model = MyModel()
+        self.model = MyModel().to(self.device)
 
         # -- train
         self.epochs = 1000
@@ -77,12 +84,13 @@ class Train:
         train_loss = 0
         for batch_idx, data_batch in enumerate(self.TrainDataset):
             # -- predict
-            predict = self.model(data_batch[0])
+            predict = self.model(data_batch[0].to(self.device))
 
             # -- loss
-            loss = self.loss(predict, data_batch[1])
+            loss = self.loss(predict, data_batch[1].to(self.device))
 
             # -- optimize
+            self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             train_loss += loss.item()
@@ -95,7 +103,7 @@ class Train:
         for epoch in range(self.epochs):
             self.train_epoch(epoch)
 
-
-my_train = Train()
-my_train()
+if __name__ == '__main__':
+    my_train = Train()
+    my_train()
 
