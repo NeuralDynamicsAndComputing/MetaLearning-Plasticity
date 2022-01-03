@@ -66,19 +66,22 @@ class Train:
         batch_size = 400
         my_transforms = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
         dataset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", download=False, transform=my_transforms)
-        self.testset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", background=False, download=False,
+        validset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", background=False, download=False,
                                                      transform=my_transforms)
         self.TrainDataset = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
+        self.ValidDataset = DataLoader(dataset=validset, batch_size=len(validset), shuffle=False)
+        self.N_train = len(dataset)
+        self.N_valid = len(validset)
 
         # -- model
         self.model = MyModel().to(self.device)
 
         # -- train
-        self.epochs = 1000
+        self.epochs = 3000
         self.loss = nn.CrossEntropyLoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=1e-3)
 
-    def train_epoch(self, epoch):
+    def train_epoch(self):
 
         self.model.train()
         train_loss = 0
@@ -94,16 +97,36 @@ class Train:
             loss.backward()
             self.optimizer.step()
             train_loss += loss.item()
-            print(batch_idx, loss.item())
 
-        print(epoch, train_loss)
+        return train_loss/(batch_idx+1)
+
+    def valid_epoch(self):
+
+        with torch.no_grad():
+            self.model.eval()
+            for batch_idx, data_batch in enumerate(self.ValidDataset):
+                # -- predict
+                predict = self.model(data_batch[0].to(self.device))
+
+                # -- loss
+                loss = self.loss(predict, data_batch[1].to(self.device))
+
+        return loss.item()
 
     def __call__(self):
 
         for epoch in range(self.epochs):
-            self.train_epoch(epoch)
+            train_loss = self.train_epoch()
+            valid_loss = self.valid_epoch()
+
+            print('Epoch {}: Training loss = {:.5f}, Validation loss = {:.5f}.'.format(epoch, train_loss, valid_loss))
+
+        torch.save(self.model.state_dict(), './model_stat.pth')
+
 
 if __name__ == '__main__':
     my_train = Train()
     my_train()
+
+
 
