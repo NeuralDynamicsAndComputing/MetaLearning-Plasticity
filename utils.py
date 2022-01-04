@@ -65,12 +65,12 @@ class Train:
         dim = 28
         batch_size = 400
         my_transforms = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
-        dataset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", download=False, transform=my_transforms)
+        trainset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", download=False, transform=my_transforms)
         validset = torchvision.datasets.Omniglot(root="./data/omniglot_train/", background=False, download=False,
                                                      transform=my_transforms)
-        self.TrainDataset = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False)
+        self.TrainDataset = DataLoader(dataset=trainset, batch_size=batch_size, shuffle=True)
         self.ValidDataset = DataLoader(dataset=validset, batch_size=len(validset), shuffle=False)
-        self.N_train = len(dataset)
+        self.N_train = len(trainset)
         self.N_valid = len(validset)
 
         # -- model
@@ -104,7 +104,7 @@ class Train:
 
         with torch.no_grad():
             self.model.eval()
-            for batch_idx, data_batch in enumerate(self.ValidDataset):
+            for data_batch in self.ValidDataset:
                 # -- predict
                 predict = self.model(data_batch[0].to(self.device))
 
