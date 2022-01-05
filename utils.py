@@ -1,11 +1,11 @@
-import numpy as np
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
 
 import torch
-from torch import nn, optim
-
 import torchvision
+import numpy as np
+import torchvision.transforms as transforms
+
+from torch import nn, optim
+from torch.utils.data import DataLoader
 
 
 def log(data, filename):
@@ -127,6 +127,4 @@ class Train:
 if __name__ == '__main__':
     my_train = Train()
     my_train()
-
-
 
