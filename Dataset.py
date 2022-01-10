@@ -104,7 +104,12 @@ class EmnistDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
-            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
+            if False:
+                if 'png' in img_:
+                    img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
+            else:
+                if 'pt' in img_:
+                    img.append(torch.load(self.char_path[idx] + '/' + img_))
 
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(400), dtype=int)
@@ -176,10 +181,16 @@ class DataProcess:
 
         x_trn, y_trn, x_qry, y_qry = data
 
-        x_trn = torch.reshape(x_trn, (self.M * self.K, self.dim, self.dim)).to(self.device)
-        y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
-        x_qry = torch.reshape(x_qry, (self.M * self.Q, self.dim, self.dim)).to(self.device)
-        y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
+        if False:
+            x_trn = torch.reshape(x_trn, (self.M * self.K, self.dim, self.dim)).to(self.device)
+            y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
+            x_qry = torch.reshape(x_qry, (self.M * self.Q, self.dim, self.dim)).to(self.device)
+            y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
+        else:
+            x_trn = torch.reshape(x_trn, (self.M * self.K, 2304)).to(self.device)  # 2304, 1953, 2439, 256
+            y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
+            x_qry = torch.reshape(x_qry, (self.M * self.Q, 2304)).to(self.device)
+            y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
 
         if self.iid:
             perm = np.random.choice(range(self.M * self.K), self.M * self.K, False)

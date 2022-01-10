@@ -34,18 +34,19 @@ class MyModel(nn.Module):
         elif self.database == 'emnist':
             dim_out = 47
 
-        # -- embedding params
-        self.cn1 = nn.Conv2d(1, 256, kernel_size=3, stride=2)
-        self.cn2 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
-        self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-        self.cn4 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
-        self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-        self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+        if False:
+            # -- embedding params
+            self.cn1 = nn.Conv2d(1, 256, kernel_size=3, stride=2)
+            self.cn2 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
+            self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+            self.cn4 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
+            self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
+            self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
 
         # -- prediction params
-        self.fc1 = nn.Linear(2304, 1700)
-        self.fc2 = nn.Linear(1700, 1200)
-        self.fc3 = nn.Linear(1200, dim_out)
+        self.fc1 = nn.Linear(2304, 170)  # 2304, 1953, 2439, 256
+        self.fc2 = nn.Linear(170, 120)
+        self.fc3 = nn.Linear(120, dim_out)
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100-1)
@@ -61,16 +62,19 @@ class MyModel(nn.Module):
 
     def forward(self, x):
 
-        y1 = self.relu(self.cn1(x))
-        y2 = self.relu(self.cn2(y1))
-        y3 = self.relu(self.cn3(y2))
-        y4 = self.relu(self.cn4(y3))
-        if self.database == 'omniglot':
-            y5 = self.relu(self.cn5(y4))
-            y6 = self.relu(self.cn6(y5))
-            y6 = y6.view(y6.size(0), -1)
-        elif self.database == 'emnist':
-            y6 = y4.view(y4.size(0), -1)
+        if False:
+            y1 = self.relu(self.cn1(x))
+            y2 = self.relu(self.cn2(y1))
+            y3 = self.relu(self.cn3(y2))
+            y4 = self.relu(self.cn4(y3))
+            if self.database == 'omniglot':
+                y5 = self.relu(self.cn5(y4))
+                y6 = self.relu(self.cn6(y5))
+                y6 = y6.view(y6.size(0), -1)
+            elif self.database == 'emnist':
+                y6 = y4.view(y4.size(0), -1)
+        else:
+            y6 = x.squeeze(1)
 
         y7 = self.sopl(self.fc1(y6))
         y8 = self.sopl(self.fc2(y7))
@@ -113,9 +117,10 @@ class Train:
         """
         # -- init model
         model = MyModel(self.database)
-        old_model = torch.load(self.path_pretrained)
-        for old_key in old_model:
-            dict(model.named_parameters())[old_key].data = old_model[old_key]
+        if False:
+            old_model = torch.load(self.path_pretrained)
+            for old_key in old_model:
+                dict(model.named_parameters())[old_key].data = old_model[old_key]
 
         # -- learning flags
         for key, val in model.named_parameters():
@@ -253,7 +258,7 @@ def parse_args():
 
     # -- meta-training params
     parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
+    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
