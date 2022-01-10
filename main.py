@@ -14,7 +14,7 @@ from torch.nn import functional as func
 from torch.utils.data import DataLoader, RandomSampler
 # from kymatio.torch import Scattering2D
 
-from utils import log
+from utils import log, plot_meta, plot_adpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
 from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer_derive as OptimAdptDerv
 
@@ -257,7 +257,7 @@ def parse_args():
     parser.add_argument('--dim', type=int, default=28, help='The dimension of the training data.')
 
     # -- meta-training params
-    parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
+    parser.add_argument('--episodes', type=int, default=500, help='The number of training episodes.')
     parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
@@ -308,6 +308,12 @@ def main():
     # -- train model
     my_train = Train(meta_dataset, args)
     my_train()
+
+    # -- log
+    plot_meta('loss_meta.txt', 'Meta loss', [0, 5], args)
+    plot_meta('acc_meta.txt', 'Meta accuracy', [0, 1], args)
+    plot_adpt('loss.txt', 'Adaptation loss', [0, 5], args)
+    plot_adpt('acc.txt', 'Adaptation accuracy', [0, 1], args)
 
 
 if __name__ == '__main__':
