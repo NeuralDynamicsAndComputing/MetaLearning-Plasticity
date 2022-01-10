@@ -11,8 +11,8 @@ from torch import nn, optim
 from torchviz import make_dot
 from torch.nn.utils import _stateless
 from torch.nn import functional as func
+from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
-# from kymatio.torch import Scattering2D
 
 from utils import log, plot_meta, plot_adpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
@@ -60,7 +60,6 @@ class MyModel(nn.Module):
 
         return (y6, y7, y8), self.fc3(y8)
 
-
 class Train:
     def __init__(self, meta_dataset, args):
 
@@ -77,9 +76,7 @@ class Train:
                                         device=self.device)
 
         # -- model params
-        self.path_pretrained = './data/models/omniglot_example/model_stat.pth'
         self.model = self.load_model().to(self.device)
-        # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # -- optimization params
         self.lr_meta = args.lr_meta
@@ -99,9 +96,7 @@ class Train:
 
         # -- learning flags
         for key, val in model.named_parameters():
-            if 'cn' in key:
-                val.meta, val.adapt, val.requires_grad = False, False, False
-            elif 'fc' in key:
+            if 'fc' in key:
                 val.meta, val.adapt = False, True
             else:
                 val.meta, val.adapt = True, False
@@ -174,6 +169,9 @@ class Train:
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
+
+                print("GPU Usage")
+                gpu_usage()
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
@@ -281,6 +279,9 @@ def main():
     meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
     # -- train model
+    print("Initial GPU Usage")
+    gpu_usage()
+
     my_train = Train(meta_dataset, args)
     my_train()
 
