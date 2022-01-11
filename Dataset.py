@@ -176,21 +176,16 @@ class DataProcess:
         self.device = device
         self.iid = iid
         self.dim = dim
+        self.dim_ = 523
 
     def __call__(self, data):
 
         x_trn, y_trn, x_qry, y_qry = data
 
-        if False:
-            x_trn = torch.reshape(x_trn, (self.M * self.K, self.dim, self.dim)).to(self.device)
-            y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
-            x_qry = torch.reshape(x_qry, (self.M * self.Q, self.dim, self.dim)).to(self.device)
-            y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
-        else:
-            x_trn = torch.reshape(x_trn, (self.M * self.K, 2304)).to(self.device)  # 2304, 1953, 2439, 256
-            y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
-            x_qry = torch.reshape(x_qry, (self.M * self.Q, 2304)).to(self.device)
-            y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
+        x_trn = torch.reshape(x_trn, (self.M * self.K, self.dim_)).to(self.device)
+        y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
+        x_qry = torch.reshape(x_qry, (self.M * self.Q, self.dim_)).to(self.device)
+        y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
 
         if self.iid:
             perm = np.random.choice(range(self.M * self.K), self.M * self.K, False)

@@ -1,11 +1,11 @@
 
 import torch
-import torchvision
 
 import numpy as np
 import matplotlib.pyplot as plt
+
 import torch.nn.functional as F
-import torchvision.transforms as transforms
+from torchvision import transforms, datasets
 
 from torch import nn, optim
 from torch.utils.data import DataLoader
@@ -16,6 +16,30 @@ def log(data, filename):
     with open(filename, 'a') as f:
         np.savetxt(f, np.array(data), newline=' ', fmt='%0.6f')
         f.writelines('\n')
+        
+
+def plot_meta(filename, title, y_lim, args, data_type='.png'):
+
+    y = np.loadtxt(args.res_dir + '/' + filename)
+    y = np.nan_to_num(y)
+
+    plt.plot(np.array(range(len(y))), y)
+    plt.title(title + ', $K={}$'.format(args.K))
+    plt.ylim(y_lim)
+    plt.savefig(args.res_dir + '/' + title + '_K' + str(args.K) + data_type, bbox_inches='tight')
+    plt.close()
+
+
+def plot_adpt(filename, title, y_lim, args, data_type='.png'):
+    y = np.loadtxt(args.res_dir + '/' + filename)
+    y = np.nan_to_num(y)
+    for idx in range(0, y.shape[0], 100):
+        plt.plot(np.array(range(y.shape[1])), y[idx])
+    plt.legend(range(0, y.shape[0], 100))
+    plt.title(title + ', $K={}$'.format(args.K))
+    plt.ylim(y_lim)
+    plt.savefig(args.res_dir + '/' + title + '_K' + str(args.K) + data_type, bbox_inches='tight')
+    plt.close()
 
 
 class MyModel(nn.Module):
@@ -69,8 +93,8 @@ class Train:
         batch_size = 100
         my_transforms = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
 
-        trainset = torchvision.datasets.FashionMNIST('./data/fashionMNIST/', train=True, download=True, transform=my_transforms)
-        validset = torchvision.datasets.FashionMNIST('./data/fashionMNIST/', train=False, download=True, transform=my_transforms)
+        trainset = datasets.FashionMNIST('./data/fashionMNIST/', train=True, download=True, transform=my_transforms)
+        validset = datasets.FashionMNIST('./data/fashionMNIST/', train=False, download=True, transform=my_transforms)
 
         self.TrainDataset = DataLoader(dataset=trainset, batch_size=batch_size, shuffle=True)
         self.ValidDataset = DataLoader(dataset=validset, batch_size=len(validset), shuffle=True)
@@ -148,26 +172,3 @@ class Train:
 if __name__ == '__main__':
     my_train = Train()
     my_train()
-
-def plot_meta(filename, title, y_lim, args, data_type='.png'):
-
-    y = np.loadtxt(args.res_dir + '/' + filename)
-    y = np.nan_to_num(y)
-
-    plt.plot(np.array(range(len(y))), y)
-    plt.title(title + ', $K={}$'.format(args.K))
-    plt.ylim(y_lim)
-    plt.savefig(args.res_dir + '/' + title + '_K' + str(args.K) + data_type, bbox_inches='tight')
-    plt.close()
-
-
-def plot_adpt(filename, title, y_lim, args, data_type='.png'):
-    y = np.loadtxt(args.res_dir + '/' + filename)
-    y = np.nan_to_num(y)
-    for idx in range(0, y.shape[0], 100):
-        plt.plot(np.array(range(y.shape[1])), y[idx])
-    plt.legend(range(0, y.shape[0], 100))
-    plt.title(title + ', $K={}$'.format(args.K))
-    plt.ylim(y_lim)
-    plt.savefig(args.res_dir + '/' + title + '_K' + str(args.K) + data_type, bbox_inches='tight')
-    plt.close()

@@ -11,8 +11,8 @@ from torch import nn, optim
 from torchviz import make_dot
 from torch.nn.utils import _stateless
 from torch.nn import functional as func
+from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
-# from kymatio.torch import Scattering2D
 
 from utils import log, plot_meta, plot_adpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
@@ -34,15 +34,6 @@ class MyModel(nn.Module):
         elif self.database == 'emnist':
             dim_out = 47
 
-        if False:
-            # -- embedding params
-            self.cn1 = nn.Conv2d(1, 256, kernel_size=3, stride=2)
-            self.cn2 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
-            self.cn3 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-            self.cn4 = nn.Conv2d(256, 256, kernel_size=3, stride=1)
-            self.cn5 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-            self.cn6 = nn.Conv2d(256, 256, kernel_size=3, stride=2)
-
         # -- prediction params
         self.fc1 = nn.Linear(2304, 170)  # 2304, 1953, 2439, 256
         self.fc2 = nn.Linear(170, 120)
@@ -62,25 +53,12 @@ class MyModel(nn.Module):
 
     def forward(self, x):
 
-        if False:
-            y1 = self.relu(self.cn1(x))
-            y2 = self.relu(self.cn2(y1))
-            y3 = self.relu(self.cn3(y2))
-            y4 = self.relu(self.cn4(y3))
-            if self.database == 'omniglot':
-                y5 = self.relu(self.cn5(y4))
-                y6 = self.relu(self.cn6(y5))
-                y6 = y6.view(y6.size(0), -1)
-            elif self.database == 'emnist':
-                y6 = y4.view(y4.size(0), -1)
-        else:
-            y6 = x.squeeze(1)
+        y6 = x.squeeze(1)
 
         y7 = self.sopl(self.fc1(y6))
         y8 = self.sopl(self.fc2(y7))
 
         return (y6, y7, y8), self.fc3(y8)
-
 
 class Train:
     def __init__(self, meta_dataset, args):
@@ -98,9 +76,7 @@ class Train:
                                         device=self.device)
 
         # -- model params
-        self.path_pretrained = './data/models/omniglot_example/model_stat.pth'
         self.model = self.load_model().to(self.device)
-        # self.scat = Scattering2D(J=3, L=8, shape=(28, 28), max_order=2)
 
         # -- optimization params
         self.lr_meta = args.lr_meta
@@ -117,16 +93,10 @@ class Train:
         """
         # -- init model
         model = MyModel(self.database)
-        if False:
-            old_model = torch.load(self.path_pretrained)
-            for old_key in old_model:
-                dict(model.named_parameters())[old_key].data = old_model[old_key]
 
         # -- learning flags
         for key, val in model.named_parameters():
-            if 'cn' in key:
-                val.meta, val.adapt, val.requires_grad = False, False, False
-            elif 'fc' in key:
+            if 'fc' in key:
                 val.meta, val.adapt = False, True
             else:
                 val.meta, val.adapt = True, False
@@ -199,6 +169,9 @@ class Train:
 
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
+
+                print("GPU Usage")
+                gpu_usage()
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
@@ -306,6 +279,9 @@ def main():
     meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
     # -- train model
+    print("Initial GPU Usage")
+    gpu_usage()
+
     my_train = Train(meta_dataset, args)
     my_train()
 
