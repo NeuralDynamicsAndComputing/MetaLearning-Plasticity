@@ -35,9 +35,9 @@ class MyModel(nn.Module):
             dim_out = 47
 
         # -- prediction params
-        self.fc1 = nn.Linear(2304, 1700)
-        self.fc2 = nn.Linear(1700, 1200)
-        self.fc3 = nn.Linear(1200, dim_out)
+        self.fc1 = nn.Linear(2304, 170)  # 2304, 1953, 2439, 256
+        self.fc2 = nn.Linear(170, 120)
+        self.fc3 = nn.Linear(120, dim_out)
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100-1)
@@ -230,8 +230,8 @@ def parse_args():
     parser.add_argument('--dim', type=int, default=28, help='The dimension of the training data.')
 
     # -- meta-training params
-    parser.add_argument('--episodes', type=int, default=3000, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=5, help='The number of training datapoints per class.')
+    parser.add_argument('--episodes', type=int, default=500, help='The number of training episodes.')
+    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
