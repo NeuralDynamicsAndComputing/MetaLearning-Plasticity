@@ -11,7 +11,7 @@ from torch import nn, optim
 from torchviz import make_dot
 from torch.nn.utils import _stateless
 from torch.nn import functional as func
-from GPUtil import showUtilization as gpu_usage
+# from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, plot_meta, plot_adpt
@@ -35,7 +35,7 @@ class MyModel(nn.Module):
             dim_out = 47
 
         # -- prediction params
-        self.fc1 = nn.Linear(2304, 170)  # 2304, 1953, 2439, 256
+        self.fc1 = nn.Linear(523, 170)
         self.fc2 = nn.Linear(170, 120)
         self.fc3 = nn.Linear(120, dim_out)
 
@@ -170,8 +170,8 @@ class Train:
             """ adaptation """
             for x, label in zip(x_trn, y_trn):
 
-                print("GPU Usage")
-                gpu_usage()
+                # print("GPU Usage")
+                # gpu_usage()
 
                 # -- stats
                 loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
@@ -279,8 +279,8 @@ def main():
     meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
     # -- train model
-    print("Initial GPU Usage")
-    gpu_usage()
+    # print("Initial GPU Usage")
+    # gpu_usage()
 
     my_train = Train(meta_dataset, args)
     my_train()
