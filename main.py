@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, plot_meta, plot_adpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
-from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer, symmetric_rule
+from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer, symmetric_rule, fixed_feedback
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -38,6 +38,11 @@ class MyModel(nn.Module):
         self.fc1 = nn.Linear(549, 170)
         self.fc2 = nn.Linear(170, 120)
         self.fc3 = nn.Linear(120, dim_out)
+
+        # -- feedback
+        self.fk1 = nn.Linear(549, 170, bias=False)
+        self.fk2 = nn.Linear(170, 120, bias=False)
+        self.fk3 = nn.Linear(120, dim_out, bias=False)
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100-1)
@@ -81,7 +86,7 @@ class Train:
         # -- optimization params
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(update_rule=symmetric_rule, rule_type='symmetric')
+        self.OptimAdpt = my_optimizer(update_rule=fixed_feedback, rule_type='fixed_feedback')
         self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
 
         # -- log params
@@ -97,7 +102,9 @@ class Train:
 
         # -- learning flags
         for key, val in model.named_parameters():
-            if 'fc' in key:
+            if 'fk' in key:
+                val.meta, val.adapt, val.requires_grad = False, False, False
+            elif 'fc' in key:
                 val.meta, val.adapt = False, True
             else:
                 val.meta, val.adapt = True, False
@@ -187,11 +194,6 @@ class Train:
                 # -- update network params
                 params = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
 
-                # -- Use the following for sanity check
-                # loss_adapt = self.loss_func(logits, label)
-                # loss_adapt.backward(create_graph=True, inputs=[params[key] for key in params if params[key].adapt])
-                # params = OptimAdptAuto(params, self.model.alpha, self.model.beta)
-
             """ meta update """
             # -- predict
             _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
@@ -231,7 +233,7 @@ def parse_args():
     parser.add_argument('--dim', type=int, default=28, help='The dimension of the training data.')
 
     # -- meta-training params
-    parser.add_argument('--episodes', type=int, default=500, help='The number of training episodes.')
+    parser.add_argument('--episodes', type=int, default=501, help='The number of training episodes.')
     parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')

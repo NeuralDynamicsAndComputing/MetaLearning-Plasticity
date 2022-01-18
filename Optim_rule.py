@@ -20,6 +20,25 @@ def my_optimizer_auto(params, lr, dr):
     return params
 
 
+def fixed_feedback(activation, e, params, lr, dr):
+    # -- weight update
+    i = 0
+    for k, p in params.items():
+        if p.adapt:
+            if k[4:] == 'weight':
+                p.update = - torch.exp(lr) * torch.matmul(e[i+1].T, activation[i])
+                params[k] = (1 - torch.exp(dr)) * p + p.update
+                params[k].adapt = p.adapt
+            elif k[4:] == 'bias':
+                p.update = - torch.exp(lr) * e[i+1].squeeze(0)
+                params[k] = (1 - torch.exp(dr)) * p + p.update
+                params[k].adapt = p.adapt
+
+                i += 1
+
+    return params
+
+
 def symmetric_rule(activation, e, params, lr, dr):
     # -- weight update
     i = 0
@@ -60,13 +79,17 @@ class my_optimizer:
         :return:
         """
         # -- error
-        # fixme: get total class as an argument
-        e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - func.one_hot(label, num_classes=47)]
         if self.rule_type == 'symmetric':
             feedback = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
+        elif self.rule_type == 'fixed_feedback':
+            feedback = dict({k: v for k, v in params.items() if 'fk' in k})
+
+        # fixme: get total class as an argument
+        e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - func.one_hot(label, num_classes=47)]
         for y, i in zip(reversed(activation), reversed(list(feedback))):
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
-        self.update_rule(activation, e, params, lr, dr)
+        # -- update weights
+        params = self.update_rule(activation, e, params, lr, dr)
 
         return params
