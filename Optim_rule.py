@@ -90,6 +90,6 @@ class my_optimizer:
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
         # -- update weights
-        self.update_rule(activation, e, params, lr, dr)
+        params = self.update_rule(activation, e, params, lr, dr)
 
         return params
