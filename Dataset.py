@@ -176,7 +176,7 @@ class DataProcess:
         self.device = device
         self.iid = iid
         self.dim = dim
-        self.dim_ = 523
+        self.dim_ = 549
 
     def __call__(self, data):
 

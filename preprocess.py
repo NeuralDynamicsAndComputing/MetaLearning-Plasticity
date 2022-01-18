@@ -35,7 +35,7 @@ class MyModel(nn.Module):
 def data_process():
 
     # -- init
-    model_conv = True
+    model_conv = False
     s_dir = os.getcwd()
     emnist_dir = s_dir + '/data/emnist/'
     char_path = [folder for folder, folders, _ in os.walk(emnist_dir) if not folders]
@@ -52,8 +52,7 @@ def data_process():
             except:
                 pass
     else:
-        pass
-        # model = Scattering2D(J=3, L=9, shape=(28, 28), max_order=2)
+        model = Scattering2D(J=3, L=4, shape=(28, 28), max_order=2)
 
     # -- process
     for idx in range(len(char_path)):
