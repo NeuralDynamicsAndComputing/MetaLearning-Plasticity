@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, plot_meta, plot_adpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
-from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer_derive as OptimAdptDerv
+from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer, symmetric_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -35,7 +35,7 @@ class MyModel(nn.Module):
             dim_out = 47
 
         # -- prediction params
-        self.fc1 = nn.Linear(523, 170)
+        self.fc1 = nn.Linear(549, 170)
         self.fc2 = nn.Linear(170, 120)
         self.fc3 = nn.Linear(120, dim_out)
 
@@ -81,6 +81,7 @@ class Train:
         # -- optimization params
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
+        self.OptimAdpt = my_optimizer(update_rule=symmetric_rule, rule_type='symmetric')
         self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
 
         # -- log params
@@ -184,7 +185,7 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = OptimAdptDerv(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
+                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
 
                 # -- Use the following for sanity check
                 # loss_adapt = self.loss_func(logits, label)
