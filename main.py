@@ -40,9 +40,10 @@ class MyModel(nn.Module):
         self.fc3 = nn.Linear(120, dim_out)
 
         # -- feedback
-        self.fk1 = nn.Linear(549, 170, bias=False)
-        self.fk2 = nn.Linear(170, 120, bias=False)
-        self.fk3 = nn.Linear(120, dim_out, bias=False)
+        if True:  # todo: define flag in args
+            self.fk1 = nn.Linear(549, 170, bias=False)
+            self.fk2 = nn.Linear(170, 120, bias=False)
+            self.fk3 = nn.Linear(120, dim_out, bias=False)
 
         # -- learning params
         self.alpha = nn.Parameter(torch.rand(1) / 100-1)
@@ -86,7 +87,7 @@ class Train:
         # -- optimization params
         self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(update_rule=fixed_feedback, rule_type='fixed_feedback')
+        self.OptimAdpt = my_optimizer(update_rule=symmetric_rule, rule_type='symmetric')
         self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
 
         # -- log params
@@ -103,7 +104,8 @@ class Train:
         # -- learning flags
         for key, val in model.named_parameters():
             if 'fk' in key:
-                val.meta, val.adapt, val.requires_grad = False, False, False
+                if True:  # todo: if evolve, fk has different flags. set the flag in args.
+                    val.meta, val.adapt, val.requires_grad = False, False, False
             elif 'fc' in key:
                 val.meta, val.adapt = False, True
             else:
