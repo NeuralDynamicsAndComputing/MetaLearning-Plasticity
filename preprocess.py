@@ -4,7 +4,7 @@ import torchvision.transforms as transforms
 
 from torch import nn
 from PIL import Image
-# from kymatio.torch import Scattering2D
+from kymatio.torch import Scattering2D
 
 
 class MyModel(nn.Module):
