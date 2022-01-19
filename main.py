@@ -25,7 +25,7 @@ torch.manual_seed(0)
 
 
 class MyModel(nn.Module):
-    def __init__(self, database):
+    def __init__(self, database, sym, fix, evl):
         super(MyModel, self).__init__()
 
         self.database = database
@@ -40,8 +40,6 @@ class MyModel(nn.Module):
         self.fc3 = nn.Linear(120, dim_out)
 
         # -- feedback
-        sym, fix, evl = False, False, True  # todo: take this to args
-
         if evl or fix:
             self.fk1 = nn.Linear(549, 170, bias=False)
             self.fk2 = nn.Linear(170, 120, bias=False)
@@ -77,7 +75,7 @@ class MyModel(nn.Module):
 class Train:
     def __init__(self, meta_dataset, args):
 
-        self.sym, self.fix, self.evl = False, False, True  # todo: take this to args
+        self.sym, self.fix, self.evl = args.sym, args.fix, args.evl
 
         # -- processor params
         self.device = args.device
@@ -99,7 +97,7 @@ class Train:
         elif self.evl:
             param_group = [{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd}, 
                            {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}]
-        self.OptimAdpt = my_optimizer(update_rule=evolve_rule, rule_type='evolving')
+        self.OptimAdpt = my_optimizer(evolve_rule, self.sym, self.fix, self.evl)
         self.OptimMeta = optim.Adam(param_group)
 
         # -- log params
@@ -111,7 +109,7 @@ class Train:
             parameters.
         """
         # -- init model
-        model = MyModel(self.database)
+        model = MyModel(self.database, self.sym, self.fix, self.evl)
 
         # -- learning flags
         for key, val in model.named_parameters():
@@ -226,7 +224,7 @@ class Train:
                     quit()
 
                 # -- update network params
-                if self.sym or self.fix:  # todo: define as a list in the model itself
+                if self.sym or self.fix:  # todo: define as a list 'Theta' in the model itself
                     Theta = [self.model.alpha_fwd, self.model.beta_fwd]
                 elif self.evl:
                     Theta = [self.model.alpha_fwd, self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk]  
@@ -304,6 +302,9 @@ def parse_args():
 
     # -- GPU settings
     args.device = torch.device('cuda' if (bool(args.gpu_mode) and torch.cuda.is_available()) else 'cpu')
+
+    # -- network type
+    args.sym, args.fix, args.evl = False, False, True
 
     return check_args(args)
 

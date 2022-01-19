@@ -70,11 +70,10 @@ def symmetric_rule(activation, e, params, feedback, Theta):
 
 
 class my_optimizer:
-    def __init__(self, update_rule, rule_type):
+    def __init__(self, update_rule, sym, fix, evl):
         self.update_rule = update_rule
-        self.rule_type = rule_type  # todo: remove this
 
-        self.sym, self.fix, self.evl = False, False, True  # todo: take this to args
+        self.sym, self.fix, self.evl = sym, fix, evl
 
     def __call__(self, params, logits, label, activation, Beta, Theta):
 
