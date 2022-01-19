@@ -3,22 +3,6 @@ import torch
 from torch.nn import functional as func
 
 
-def my_optimizer_auto(params, lr, dr):
-    """
-        One step update of the inner-loop (autograd).
-    :param params: model parameters
-    :param lr: learning rate variable
-    :param dr: decay rate variable
-    :return:
-    """
-    for k, p in params.items():
-        if p.adapt:
-            p.update = - torch.exp(lr) * p.grad
-            params[k] = (1 - torch.exp(dr)) * p + p.update
-            params[k].adapt = p.adapt
-
-    return params
-
 def evolve_rule(activation, e, params, feedback, Theta):
     lr_fwd, dr_fwd, lr_fdk, dr_fdk = Theta
     # -- weight update
