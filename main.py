@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, plot_meta, plot_adpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
-from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer, symmetric_rule, fixed_feedback
+from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer, symmetric_rule, fixed_feedback, evolve_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -40,14 +40,19 @@ class MyModel(nn.Module):
         self.fc3 = nn.Linear(120, dim_out)
 
         # -- feedback
-        if True:  # todo: define flag in args
+        sym, fix, evl = False, False, True  # todo: take this to args
+
+        if evl or fix:
             self.fk1 = nn.Linear(549, 170, bias=False)
             self.fk2 = nn.Linear(170, 120, bias=False)
             self.fk3 = nn.Linear(120, dim_out, bias=False)
 
         # -- learning params
-        self.alpha = nn.Parameter(torch.rand(1) / 100-1)
-        self.beta = nn.Parameter(torch.rand(1) / 100-1)
+        self.alpha_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
+        if evl:
+            self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+            self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -55,7 +60,9 @@ class MyModel(nn.Module):
         self.sopl = nn.Softplus(beta=self.Beta)
 
         # -- learnable params
-        self.params = nn.ParameterList()
+        self.params_fwd = nn.ParameterList()
+        if evl:
+            self.params_fbk = nn.ParameterList()
 
     def forward(self, x):
 
@@ -66,8 +73,11 @@ class MyModel(nn.Module):
 
         return (y6, y7, y8), self.fc3(y8)
 
+
 class Train:
     def __init__(self, meta_dataset, args):
+
+        self.sym, self.fix, self.evl = False, False, True  # todo: take this to args
 
         # -- processor params
         self.device = args.device
@@ -75,20 +85,22 @@ class Train:
         # -- data params
         self.database = args.database
         self.meta_dataset = meta_dataset
-        self.M = args.M
-        self.K = args.K
-        self.Q = args.Q
-        self.data_process = DataProcess(M=self.M, K=self.K, Q=self.Q, database=self.database, dim=args.dim,
+        self.data_process = DataProcess(M=args.M, K=args.K, Q=args.Q, database=self.database, dim=args.dim,
                                         device=self.device)
 
         # -- model params
         self.model = self.load_model().to(self.device)
+        self.B_init = args.B_init
 
         # -- optimization params
-        self.lr_meta = args.lr_meta
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(update_rule=symmetric_rule, rule_type='symmetric')
-        self.OptimMeta = optim.Adam(self.model.params.parameters(), lr=self.lr_meta)
+        if self.sym or self.fix:
+            param_group = [{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd}]
+        elif self.evl:
+            param_group = [{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd}, 
+                           {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}]
+        self.OptimAdpt = my_optimizer(update_rule=evolve_rule, rule_type='evolving')
+        self.OptimMeta = optim.Adam(param_group)
 
         # -- log params
         self.res_dir = args.res_dir
@@ -103,17 +115,31 @@ class Train:
 
         # -- learning flags
         for key, val in model.named_parameters():
-            if 'fk' in key:
-                if True:  # todo: if evolve, fk has different flags. set the flag in args.
-                    val.meta, val.adapt, val.requires_grad = False, False, False
-            elif 'fc' in key:
-                val.meta, val.adapt = False, True
-            else:
-                val.meta, val.adapt = True, False
+            if 'fc' in key:
+                val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
+            elif 'fk' in key:
+                if self.sym:  # todo: use feedback for 'sym'
+                    pass
+                elif self.fix:
+                    val.meta_fwd, val.meta_fbk, val.adapt, val.requires_grad = False, False, False, False
+                elif self.evl:
+                    val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
+            elif 'fwd' in key:
+                val.meta_fwd, val.meta_fbk, val.adapt = True, False, False
+            elif 'fbk' in key:
+                if self.sym:  # todo: if 'model.params_fbk' is not in 'model.named_parameters()', remove these if statements
+                    pass
+                elif self.fix:
+                    pass
+                elif self.evl:
+                    val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
 
             # -- learnable params
-            if val.meta is True:
-                model.params.append(val)
+            if val.meta_fwd is True:
+                model.params_fwd.append(val)
+            elif val.meta_fbk is True:
+                if self.evl:
+                    model.params_fbk.append(val)  # todo: if passing empty list to optimizer does not cause an issue, remove 'if self.evl'
 
         return model
 
@@ -134,6 +160,12 @@ class Train:
     def reinitialize(self):
 
         self.model.apply(self.weights_init)
+
+        if self.evl:
+            if self.B_init == 'W':  # todo: avoid manually initializing B.
+                self.model.fk1.weight.data = self.model.fc1.weight.data
+                self.model.fk2.weight.data = self.model.fc2.weight.data
+                self.model.fk3.weight.data = self.model.fc3.weight.data
 
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
         for key in params:
@@ -194,7 +226,11 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha, self.model.beta)
+                if self.sym or self.fix:  # todo: define as a list in the model itself
+                    Theta = [self.model.alpha_fwd, self.model.beta_fwd]
+                elif self.evl:
+                    Theta = [self.model.alpha_fwd, self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk]  
+                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, Theta)
 
             """ meta update """
             # -- predict
@@ -218,10 +254,18 @@ class Train:
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
-            print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
+            if self.sym or self.fix:
+                print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
                   '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
                                                     torch.exp(self.model.alpha).detach().cpu().numpy()[0],
                                                     torch.exp(self.model.beta).detach().cpu().numpy()[0]))
+            elif self.evl:  # todo: make a loop over Theta to avoid if statement
+                print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}\tlr (W): {:.6f}\tdr (W): {:.6f}'
+                      '\tlr (B): {:.6f}\tdr (B): {:.6f}'.format(eps+1, loss_meta.item(), acc,
+                                                                torch.exp(self.model.alpha_fwd).detach().cpu().numpy()[0],
+                                                                torch.exp(self.model.beta_fwd).detach().cpu().numpy()[0],
+                                                                torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
+                                                                torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
 
 
 def parse_args():
@@ -239,10 +283,15 @@ def parse_args():
     parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lr_meta', type=float, default=5e-2, help='.')
+    parser.add_argument('--lr_meta_fwd', type=float, default=5e-2, help='.')
+    parser.add_argument('--lr_meta_fbk', type=float, default=5e-2, help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
+
+    # -- model params
+    parser.add_argument('--B_init', type=str, default='W',
+                        help='Feedback initialization method: 1) B_init.T = rand; 2) B_init.T = W.')
 
     args = parser.parse_args()
 
@@ -268,6 +317,8 @@ def check_args(args):
     with open(args.res_dir + '/args.txt', 'w') as fp:
         for item in vars(args).items():
             fp.write("{} : {}\n".format(item[0], item[1]))
+
+    # todo: throw error : B_init \in {'W', 'rand'}
 
     return args
 
