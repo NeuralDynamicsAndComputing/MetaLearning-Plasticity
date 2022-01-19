@@ -45,7 +45,7 @@ def evolve_rule(activation, e, params, feedback, Theta):
     return params
 
 
-def fixed_feedback(activation, e, params, Theta):
+def fixed_feedback(activation, e, params, feedback, Theta):
     lr, dr = Theta
     # -- weight update
     i = 0
@@ -65,7 +65,7 @@ def fixed_feedback(activation, e, params, Theta):
     return params
 
 
-def symmetric_rule(activation, e, params, Theta):
+def symmetric_rule(activation, e, params, feedback, Theta):
     lr, dr = Theta
     # -- weight update
     i = 0
@@ -118,6 +118,7 @@ class my_optimizer:
         for y, i in zip(reversed(activation), reversed(list(feedback))):
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
+        # -- update weights
         params = self.update_rule(activation, e, params, feedback, Theta)
 
         return params
