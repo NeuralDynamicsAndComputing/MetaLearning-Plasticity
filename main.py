@@ -14,12 +14,9 @@ from torch.nn import functional as func
 # from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
 
-from utils import log
-from Optim_rule import my_optimizer as OptimAdpt
-from Dataset import EmnistDataset, OmniglotDataset, DataProcess
 from utils import log, plot_meta, plot_adpt
 from Dataset import EmnistDataset, OmniglotDataset, DataProcess
-from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer, symmetric_rule, evolve_rule
+from Optim_rule import my_optimizer_auto as OptimAdptAuto, my_optimizer, symmetric_rule, fixed_feedback, evolve_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -43,15 +40,19 @@ class MyModel(nn.Module):
         self.fc3 = nn.Linear(120, dim_out)
 
         # -- feedback
-        self.fk1 = nn.Linear(2304, 1700, bias=False)
-        self.fk2 = nn.Linear(1700, 1200, bias=False)
-        self.fk3 = nn.Linear(1200, dim_out, bias=False)
+        sym, fix, evl = False, False, True  # todo: take this to args
+
+        if evl:  # todo: define flag in args
+            self.fk1 = nn.Linear(549, 170, bias=False)
+            self.fk2 = nn.Linear(170, 120, bias=False)
+            self.fk3 = nn.Linear(120, dim_out, bias=False)
 
         # -- learning params
         self.alpha_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        if evl:
+            self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+            self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -60,7 +61,8 @@ class MyModel(nn.Module):
 
         # -- learnable params
         self.params_fwd = nn.ParameterList()
-        self.params_fbk = nn.ParameterList()
+        if evl:
+            self.params_fbk = nn.ParameterList()
 
     def forward(self, x):
 
@@ -71,8 +73,11 @@ class MyModel(nn.Module):
 
         return (y6, y7, y8), self.fc3(y8)
 
+
 class Train:
     def __init__(self, meta_dataset, args):
+
+        self.sym, self.fix, self.evl = False, False, True  # todo: take this to args
 
         # -- processor params
         self.device = args.device
@@ -106,18 +111,25 @@ class Train:
 
         # -- learning flags
         for key, val in model.named_parameters():
-            if 'fc' in key or 'fk' in key:
-                val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
+            if 'fc' in key:
+                if self.evl:
+                    val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
+            elif 'fk' in key:
+                if self.evl:
+                    val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
             elif 'fwd' in key:
-                val.meta_fwd, val.meta_fbk, val.adapt = True, False, False
+                if self.evl:
+                    val.meta_fwd, val.meta_fbk, val.adapt = True, False, False
             elif 'fbk' in key:
-                val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
+                if self.evl:
+                    val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
 
             # -- learnable params
             if val.meta_fwd is True:
                 model.params_fwd.append(val)
-            elif val.meta_fbk is True:
-                model.params_fbk.append(val)
+            if self.evl:
+                if val.meta_fbk is True:
+                    model.params_fbk.append(val)
 
         return model
 
@@ -139,10 +151,11 @@ class Train:
 
         self.model.apply(self.weights_init)
 
-        if self.B_init == 'W':  # todo: avoid manually initializing B.
-            self.model.fk1.weight.data = self.model.fc1.weight.data
-            self.model.fk2.weight.data = self.model.fc2.weight.data
-            self.model.fk3.weight.data = self.model.fc3.weight.data
+        if self.evl:
+            if self.B_init == 'W':  # todo: avoid manually initializing B.
+                self.model.fk1.weight.data = self.model.fc1.weight.data
+                self.model.fk2.weight.data = self.model.fc2.weight.data
+                self.model.fk3.weight.data = self.model.fc3.weight.data
 
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
         for key in params:
@@ -203,8 +216,8 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.model.alpha_fwd,
-                                   self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk)
+                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, [self.model.alpha_fwd,
+                                   self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk])
 
             """ meta update """
             # -- predict

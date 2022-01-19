@@ -19,7 +19,8 @@ def my_optimizer_auto(params, lr, dr):
 
     return params
 
-def evolve_rule(activation, e, params, feedback, lr_fwd, dr_fwd, lr_fdk, dr_fdk):
+def evolve_rule(activation, e, params, feedback, Theta):
+    lr_fwd, dr_fwd, lr_fdk, dr_fdk = Theta
     # -- weight update
     i = 0
     for k, p in params.items():
@@ -44,7 +45,28 @@ def evolve_rule(activation, e, params, feedback, lr_fwd, dr_fwd, lr_fdk, dr_fdk)
     return params
 
 
-def symmetric_rule(activation, e, params, lr, dr):
+def fixed_feedback(activation, e, params, Theta):
+    lr, dr = Theta
+    # -- weight update
+    i = 0
+    for k, p in params.items():
+        if p.adapt:
+            if k[4:] == 'weight':
+                p.update = - torch.exp(lr) * torch.matmul(e[i+1].T, activation[i])
+                params[k] = (1 - torch.exp(dr)) * p + p.update
+                params[k].adapt = p.adapt
+            elif k[4:] == 'bias':
+                p.update = - torch.exp(lr) * e[i+1].squeeze(0)
+                params[k] = (1 - torch.exp(dr)) * p + p.update
+                params[k].adapt = p.adapt
+
+                i += 1
+
+    return params
+
+
+def symmetric_rule(activation, e, params, Theta):
+    lr, dr = Theta
     # -- weight update
     i = 0
     for k, p in params.items():
@@ -66,9 +88,11 @@ def symmetric_rule(activation, e, params, lr, dr):
 class my_optimizer:
     def __init__(self, update_rule, rule_type):
         self.update_rule = update_rule
-        self.rule_type = rule_type
+        self.rule_type = rule_type  # todo: remove this
 
-    def __call__(self, params, logits, label, activation, Beta, lr_fwd, dr_fwd, lr_fdk, dr_fdk):
+        self.sym, self.fix, self.evl = False, False, True  # todo: take this to args
+
+    def __call__(self, params, logits, label, activation, Beta, Theta):
 
         """
             One step update of the inner-loop (derived formulation).
@@ -77,22 +101,23 @@ class my_optimizer:
         :param label: target class
         :param activation: vector of activations
         :param Beta: smoothness coefficient for non-linearity
-        :param lr_fwd: learning rate variable for feedforward weight
-        :param dr_fwd: decay rate variable for feedforward weight
-        :param lr_fdk: learning rate variable for feedback connection
-        :param dr_fdk: decay rate variable for feedback connection
+        :param Theta: meta-parameters
+
         :return:
         """
         # -- error
+        if self.sym:
+            feedback = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
+        elif self.fix:
+            feedback = dict({k: v for k, v in params.items() if 'fk' in k})
+        elif self.evl:
+            feedback = dict({k: v for k, v in params.items() if 'fk' in k})
+
         # fixme: get total class as an argument
         e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - func.one_hot(label, num_classes=47)]
-        if self.rule_type == 'symmetric':
-            feedback = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
-        elif self.rule_type == 'evolving':
-            feedback = dict({k: v for k, v in params.items() if 'fk' in k})
         for y, i in zip(reversed(activation), reversed(list(feedback))):
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
-        params = self.update_rule(activation, e, params, feedback, lr_fwd, dr_fwd, lr_fdk, dr_fdk)
+        params = self.update_rule(activation, e, params, feedback, Theta)
 
         return params
