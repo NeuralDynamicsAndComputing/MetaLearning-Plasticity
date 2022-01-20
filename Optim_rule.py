@@ -91,9 +91,7 @@ class my_optimizer:
         # -- error
         if self.sym:
             feedback = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
-        elif self.fix:
-            feedback = dict({k: v for k, v in params.items() if 'fk' in k})
-        elif self.evl:
+        elif self.fix or self.evl:
             feedback = dict({k: v for k, v in params.items() if 'fk' in k})
 
         # fixme: get total class as an argument

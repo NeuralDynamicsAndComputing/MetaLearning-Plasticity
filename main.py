@@ -25,14 +25,10 @@ torch.manual_seed(0)
 
 
 class MyModel(nn.Module):
-    def __init__(self, database, sym, fix, evl):
+    def __init__(self, sym, fix, evl):
         super(MyModel, self).__init__()
 
-        self.database = database
-        if self.database == 'omniglot':
-            dim_out = 964
-        elif self.database == 'emnist':
-            dim_out = 47
+        dim_out = 47
 
         # -- prediction params
         self.fc1 = nn.Linear(549, 170)
@@ -59,8 +55,7 @@ class MyModel(nn.Module):
 
         # -- learnable params
         self.params_fwd = nn.ParameterList()
-        if evl:
-            self.params_fbk = nn.ParameterList()
+        self.params_fbk = nn.ParameterList()
 
     def forward(self, x):
 
@@ -87,18 +82,15 @@ class Train:
                                         device=self.device)
 
         # -- model params
+        self.Theta = nn.ParameterList()
         self.model = self.load_model().to(self.device)
         self.B_init = args.B_init
 
         # -- optimization params
         self.loss_func = nn.CrossEntropyLoss()
-        if self.sym or self.fix:
-            param_group = [{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd}]
-        elif self.evl:
-            param_group = [{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd}, 
-                           {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}]
         self.OptimAdpt = my_optimizer(evolve_rule, self.sym, self.fix, self.evl)
-        self.OptimMeta = optim.Adam(param_group)
+        self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
+                                     {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
 
         # -- log params
         self.res_dir = args.res_dir
@@ -109,7 +101,7 @@ class Train:
             parameters.
         """
         # -- init model
-        model = MyModel(self.database, self.sym, self.fix, self.evl)
+        model = MyModel(self.sym, self.fix, self.evl)
 
         # -- learning flags
         for key, val in model.named_parameters():
@@ -125,19 +117,17 @@ class Train:
             elif 'fwd' in key:
                 val.meta_fwd, val.meta_fbk, val.adapt = True, False, False
             elif 'fbk' in key:
-                if self.sym:  # todo: if 'model.params_fbk' is not in 'model.named_parameters()', remove these if statements
-                    pass
-                elif self.fix:
-                    pass
-                elif self.evl:
-                    val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
+                val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
 
-            # -- learnable params
+            # -- meta-params
             if val.meta_fwd is True:
                 model.params_fwd.append(val)
             elif val.meta_fbk is True:
-                if self.evl:
-                    model.params_fbk.append(val)  # todo: if passing empty list to optimizer does not cause an issue, remove 'if self.evl'
+                model.params_fbk.append(val)
+
+        # -- meta-params
+        self.Theta.extend(model.params_fwd)
+        self.Theta.extend(model.params_fbk)
 
         return model
 
@@ -224,11 +214,7 @@ class Train:
                     quit()
 
                 # -- update network params
-                if self.sym or self.fix:  # todo: define as a list 'Theta' in the model itself
-                    Theta = [self.model.alpha_fwd, self.model.beta_fwd]
-                elif self.evl:
-                    Theta = [self.model.alpha_fwd, self.model.beta_fwd, self.model.alpha_fbk, self.model.beta_fbk]  
-                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, Theta)
+                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
 
             """ meta update """
             # -- predict
@@ -252,18 +238,10 @@ class Train:
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
-            if self.sym or self.fix:
-                print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'
-                  '\tlr: {:.6f}\tdr: {:.6f}'.format(eps+1, loss_meta.item(), acc,
-                                                    torch.exp(self.model.alpha).detach().cpu().numpy()[0],
-                                                    torch.exp(self.model.beta).detach().cpu().numpy()[0]))
-            elif self.evl:  # todo: make a loop over Theta to avoid if statement
-                print('Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}\tlr (W): {:.6f}\tdr (W): {:.6f}'
-                      '\tlr (B): {:.6f}\tdr (B): {:.6f}'.format(eps+1, loss_meta.item(), acc,
-                                                                torch.exp(self.model.alpha_fwd).detach().cpu().numpy()[0],
-                                                                torch.exp(self.model.beta_fwd).detach().cpu().numpy()[0],
-                                                                torch.exp(self.model.alpha_fbk).detach().cpu().numpy()[0],
-                                                                torch.exp(self.model.beta_fbk).detach().cpu().numpy()[0]))
+            line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
+            for idx, param in enumerate(Theta):
+                line += '\tMetaParam_{}: {:.6f}'.format(idx+1, torch.exp(param).detach().cpu().numpy()[0])
+            print(line)
 
 
 def parse_args():
