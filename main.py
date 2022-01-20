@@ -25,7 +25,7 @@ torch.manual_seed(0)
 
 
 class MyModel(nn.Module):
-    def __init__(self, sym, fix, evl):
+    def __init__(self):
         super(MyModel, self).__init__()
 
         dim_out = 47
@@ -36,17 +36,15 @@ class MyModel(nn.Module):
         self.fc3 = nn.Linear(120, dim_out)
 
         # -- feedback
-        if evl or fix:
-            self.fk1 = nn.Linear(549, 170, bias=False)
-            self.fk2 = nn.Linear(170, 120, bias=False)
-            self.fk3 = nn.Linear(120, dim_out, bias=False)
+        self.fk1 = nn.Linear(549, 170, bias=False)
+        self.fk2 = nn.Linear(170, 120, bias=False)
+        self.fk3 = nn.Linear(120, dim_out, bias=False)
 
         # -- learning params
         self.alpha_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
-        if evl:
-            self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
-            self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -70,8 +68,6 @@ class MyModel(nn.Module):
 class Train:
     def __init__(self, meta_dataset, args):
 
-        self.sym, self.fix, self.evl = args.sym, args.fix, args.evl
-
         # -- processor params
         self.device = args.device
 
@@ -82,13 +78,14 @@ class Train:
                                         device=self.device)
 
         # -- model params
+        self.evl = args.evl
         self.Theta = nn.ParameterList()
         self.model = self.load_model().to(self.device)
         self.B_init = args.B_init
 
         # -- optimization params
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(evolve_rule, self.sym, self.fix, self.evl)
+        self.OptimAdpt = my_optimizer(symmetric_rule)
         self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
                                      {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
 
@@ -101,23 +98,24 @@ class Train:
             parameters.
         """
         # -- init model
-        model = MyModel(self.sym, self.fix, self.evl)
+        model = MyModel()
 
         # -- learning flags
         for key, val in model.named_parameters():
             if 'fc' in key:
                 val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
             elif 'fk' in key:
-                if self.sym:  # todo: use feedback for 'sym'
-                    pass
-                elif self.fix:
-                    val.meta_fwd, val.meta_fbk, val.adapt, val.requires_grad = False, False, False, False
-                elif self.evl:
+                if self.evl:
                     val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
+                else:
+                    val.meta_fwd, val.meta_fbk, val.adapt, val.requires_grad = False, False, False, False
             elif 'fwd' in key:
                 val.meta_fwd, val.meta_fbk, val.adapt = True, False, False
             elif 'fbk' in key:
-                val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
+                if self.evl:
+                    val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
+                else:
+                    val.meta_fwd, val.meta_fbk, val.adapt = False, False, False
 
             # -- meta-params
             if val.meta_fwd is True:
@@ -149,11 +147,10 @@ class Train:
 
         self.model.apply(self.weights_init)
 
-        if self.evl:
-            if self.B_init == 'W':  # todo: avoid manually initializing B.
-                self.model.fk1.weight.data = self.model.fc1.weight.data
-                self.model.fk2.weight.data = self.model.fc2.weight.data
-                self.model.fk3.weight.data = self.model.fc3.weight.data
+        if self.B_init == 'W':  # todo: avoid manually initializing B.
+            self.model.fk1.weight.data = self.model.fc1.weight.data
+            self.model.fk2.weight.data = self.model.fc2.weight.data
+            self.model.fk3.weight.data = self.model.fc3.weight.data
 
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
         for key in params:
@@ -239,7 +236,7 @@ class Train:
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
-            for idx, param in enumerate(Theta):
+            for idx, param in enumerate(self.Theta):
                 line += '\tMetaParam_{}: {:.6f}'.format(idx+1, torch.exp(param).detach().cpu().numpy()[0])
             print(line)
 
@@ -282,7 +279,7 @@ def parse_args():
     args.device = torch.device('cuda' if (bool(args.gpu_mode) and torch.cuda.is_available()) else 'cpu')
 
     # -- network type
-    args.sym, args.fix, args.evl = False, False, True
+    args.evl = False
 
     return check_args(args)
 

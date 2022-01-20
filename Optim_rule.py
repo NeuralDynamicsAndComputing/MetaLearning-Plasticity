@@ -66,14 +66,18 @@ def symmetric_rule(activation, e, params, feedback, Theta):
 
                 i += 1
 
+    # -- feedback update
+    feedback_ = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
+    for i, ((k, B), (k_, _)) in enumerate(zip(feedback.items(), feedback_.items())):
+        params[k] = params[k_]
+        params[k].adapt = B.adapt
+
     return params
 
 
 class my_optimizer:
-    def __init__(self, update_rule, sym, fix, evl):
+    def __init__(self, update_rule):
         self.update_rule = update_rule
-
-        self.sym, self.fix, self.evl = sym, fix, evl
 
     def __call__(self, params, logits, label, activation, Beta, Theta):
 
@@ -89,12 +93,7 @@ class my_optimizer:
         :return:
         """
         # -- error
-        if self.sym:
-            feedback = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
-        elif self.fix or self.evl:
-            feedback = dict({k: v for k, v in params.items() if 'fk' in k})
-
-        # fixme: get total class as an argument
+        feedback = dict({k: v for k, v in params.items() if 'fk' in k})
         e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - func.one_hot(label, num_classes=47)]
         for y, i in zip(reversed(activation), reversed(list(feedback))):
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
