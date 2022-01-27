@@ -71,9 +71,10 @@ class Train:
         self.device = args.device
 
         # -- data params
+        self.K = args.K
         self.database = args.database
         self.meta_dataset = meta_dataset
-        self.data_process = DataProcess(M=args.M, K=args.K, Q=args.Q, database=self.database, dim=args.dim,
+        self.data_process = DataProcess(M=args.M, K=self.K, Q=args.Q, database=self.database, dim=args.dim,
                                         device=self.device)
 
         # -- model params
@@ -235,6 +236,13 @@ class Train:
                 line += '\tMetaParam_{}: {:.6f}'.format(idx+1, torch.exp(param).detach().cpu().numpy()[0])
             print(line)
 
+            # -- plot
+            if eps % 100 == 1:
+                plot_meta('loss_meta.txt', 'Meta loss', [0, 5], self.K, self.res_dir)
+                plot_meta('acc_meta.txt', 'Meta accuracy', [0, 1], self.K, self.res_dir)
+                plot_adpt('loss.txt', 'Adaptation loss', [0, 5], self.K, self.res_dir)
+                plot_adpt('acc.txt', 'Adaptation accuracy', [0, 1], self.K, self.res_dir)
+
 
 def parse_args():
     desc = "Pytorch implementation of meta-plasticity model."
@@ -311,12 +319,6 @@ def main():
 
     my_train = Train(meta_dataset, args)
     my_train()
-
-    # -- log
-    plot_meta('loss_meta.txt', 'Meta loss', [0, 5], args)
-    plot_meta('acc_meta.txt', 'Meta accuracy', [0, 1], args)
-    plot_adpt('loss.txt', 'Adaptation loss', [0, 5], args)
-    plot_adpt('acc.txt', 'Adaptation accuracy', [0, 1], args)
 
 
 if __name__ == '__main__':
