@@ -35,11 +35,11 @@ def fixed_feedback(activation, e, params, feedback, Theta):
     i = 0
     for k, p in params.items():
         if p.adapt:
-            if k[4:] == 'weight':
+            if 'weight' in k:
                 p.update = - torch.exp(lr) * torch.matmul(e[i+1].T, activation[i])
                 params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt
-            elif k[4:] == 'bias':
+            elif 'bias' in k:
                 p.update = - torch.exp(lr) * e[i+1].squeeze(0)
                 params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt
@@ -55,11 +55,11 @@ def symmetric_rule(activation, e, params, feedback, Theta):
     i = 0
     for k, p in params.items():
         if p.adapt:
-            if k[4:] == 'weight':
+            if 'weight' in k:
                 p.update = - torch.exp(lr) * torch.matmul(e[i + 1].T, activation[i])
                 params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt
-            elif k[4:] == 'bias':
+            elif 'bias' in k:
                 p.update = - torch.exp(lr) * e[i + 1].squeeze(0)
                 params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt

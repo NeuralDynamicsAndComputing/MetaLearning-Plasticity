@@ -28,10 +28,9 @@ class MyModel(nn.Module):
     def __init__(self):
         super(MyModel, self).__init__()
 
-        dim_out = 47
-
         # -- prediction params
         self.fc1 = nn.Linear(549, 170)
+        dim_out = 47
         self.fc2 = nn.Linear(170, 120)
         self.fc3 = nn.Linear(120, dim_out)
 
@@ -79,8 +78,8 @@ class Train:
 
         # -- model params
         self.evl = args.evl
-        self.Theta = nn.ParameterList()
         self.model = self.load_model().to(self.device)
+        self.Theta = nn.ParameterList([*self.model.params_fwd, *self.model.params_fbk])
         self.B_init = args.B_init
 
         # -- optimization params
@@ -122,10 +121,6 @@ class Train:
                 model.params_fwd.append(val)
             elif val.meta_fbk is True:
                 model.params_fbk.append(val)
-
-        # -- meta-params
-        self.Theta.extend(model.params_fwd)
-        self.Theta.extend(model.params_fbk)
 
         return model
 
@@ -278,7 +273,7 @@ def parse_args():
     # -- GPU settings
     args.device = torch.device('cuda' if (bool(args.gpu_mode) and torch.cuda.is_available()) else 'cpu')
 
-    # -- network type
+    # -- feedback type
     args.evl = False
 
     return check_args(args)

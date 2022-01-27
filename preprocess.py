@@ -3,7 +3,7 @@ import torch
 import torchvision.transforms as transforms
 
 from torch import nn
-from PIL import Image
+from PIL import Image, ImageShow, ImageOps
 from kymatio.torch import Scattering2D
 
 
@@ -35,7 +35,7 @@ class MyModel(nn.Module):
 def data_process():
 
     # -- init
-    model_conv = False
+    model_conv = True
     s_dir = os.getcwd()
     emnist_dir = s_dir + '/data/emnist/'
     char_path = [folder for folder, folders, _ in os.walk(emnist_dir) if not folders]
@@ -59,7 +59,7 @@ def data_process():
         files = [files for _, _, files in os.walk(char_path[idx])][0]
         for img in files:
             if 'png' in img:
-                data = transform(Image.open(char_path[idx] + '/' + img, mode='r').convert('L'))
+                data = transform(ImageOps.invert(Image.open(char_path[idx] + '/' + img, mode='r').convert('L')))
                 if model_conv:
                     data_processed = model(data.unsqueeze(0))
                 else:
