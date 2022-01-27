@@ -29,13 +29,13 @@ class MyModel(nn.Module):
         super(MyModel, self).__init__()
 
         # -- prediction params
-        self.fc1 = nn.Linear(549, 170)
+        self.fc1 = nn.Linear(512, 170)
         dim_out = 47
         self.fc2 = nn.Linear(170, 120)
         self.fc3 = nn.Linear(120, dim_out)
 
         # -- feedback
-        self.fk1 = nn.Linear(549, 170, bias=False)
+        self.fk1 = nn.Linear(512, 170, bias=False)
         self.fk2 = nn.Linear(170, 120, bias=False)
         self.fk3 = nn.Linear(120, dim_out, bias=False)
 
