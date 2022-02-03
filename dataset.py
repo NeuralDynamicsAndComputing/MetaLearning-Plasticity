@@ -158,8 +158,13 @@ class OmniglotDataset(Dataset):
     def __getitem__(self, idx):
 
         img = []
-        for img_ in os.listdir(self.char_path[idx]):
-            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
+        for img_ in os.listdir(self.char_path[idx]): 
+            if False:
+                if 'png' in img_:
+                    img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
+            else:
+                if 'pt' in img_:
+                    img.append(torch.load(self.char_path[idx] + '/' + img_))
 
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(20), dtype=int)

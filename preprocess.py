@@ -35,7 +35,7 @@ def data_process():
     s_dir = os.getcwd()
     emnist_dir = s_dir + '/data/emnist/'
     char_path = [folder for folder, folders, _ in os.walk(emnist_dir) if not folders]
-    transform = transforms.Compose([transforms.ToTensor()])
+    transform = transforms.Compose([transforms.Resize((28, 28)), transforms.ToTensor()])
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # -- init model
