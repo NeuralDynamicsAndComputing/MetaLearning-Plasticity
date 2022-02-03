@@ -12,23 +12,20 @@ class MyModel(nn.Module):
         super(MyModel, self).__init__()
 
         # -- embedding params
-        self.cn1 = nn.Conv2d(1, 128, kernel_size=4, stride=2)
-        self.cn2 = nn.Conv2d(128, 128, kernel_size=4, stride=1)
-        self.cn3 = nn.Conv2d(128, 128, kernel_size=4, stride=2)
-        self.cn4 = nn.Conv2d(128, 128, kernel_size=3, stride=1)
+        self.cn1 = nn.Conv2d(1, 32, kernel_size=4, stride=2)
+        self.cn2 = nn.Conv2d(32, 32, kernel_size=4, stride=1)
+        self.cn3 = nn.Conv2d(32, 32, kernel_size=4, stride=2)
 
         # -- non-linearity
         self.relu = nn.ReLU()
 
     def forward(self, x):
 
-        y1 = self.relu(self.cn1(x))
-        y2 = self.relu(self.cn2(y1))
-        y3 = self.relu(self.cn3(y2))
-        y4 = self.relu(self.cn4(y3))
-        # y4 = self.pool(y4)
+        x = self.relu(self.cn1(x))
+        x = self.relu(self.cn2(x))
+        x = self.relu(self.cn3(x))
 
-        return y4
+        return x
 
 
 def data_process():
@@ -64,8 +61,8 @@ def data_process():
                     data_processed = model(data.unsqueeze(0).to(device))
                 else:
                     data_processed = model(data)
-
                 data_processed = data_processed.view(data_processed.size(0), -1)
+
                 # -- store
                 torch.save(data_processed.data, char_path[idx] + '/' + img[:-4] + '.pt')
 

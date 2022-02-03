@@ -15,8 +15,8 @@ from torch.nn import functional as func
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, plot_meta, plot_adpt
-from Dataset import EmnistDataset, OmniglotDataset, DataProcess
-from Optim_rule import my_optimizer, symmetric_rule, fixed_feedback, evolve_rule
+from dataset import EmnistDataset, OmniglotDataset, DataProcess
+from optim import my_optimizer, symmetric_rule, fixed_feedback, evolve_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -29,8 +29,8 @@ class MyModel(nn.Module):
         super(MyModel, self).__init__()
 
         # -- prediction params
-        self.fc1 = nn.Linear(512, 170)
         dim_out = 47
+        self.fc1 = nn.Linear(512, 170)
         self.fc2 = nn.Linear(170, 120)
         self.fc3 = nn.Linear(120, dim_out)
 
