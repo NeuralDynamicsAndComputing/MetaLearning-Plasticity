@@ -6,3 +6,4 @@ results/*
 __pycache__/*
 *png
 model_torchviz
+*.o*
