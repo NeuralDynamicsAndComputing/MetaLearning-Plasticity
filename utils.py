@@ -1,12 +1,5 @@
-import torch
-
 import numpy as np
 import matplotlib.pyplot as plt
-import torch.nn.functional as F
-
-from torch import nn, optim
-from torch.utils.data import DataLoader
-from torchvision import transforms, datasets
 
 
 def log(data, filename):
@@ -38,4 +31,3 @@ def plot_adpt(filename, title, y_lim, K, res_dir, data_type='.png'):
     plt.ylim(y_lim)
     plt.savefig(res_dir + '/' + title + '_K' + str(K) + data_type, bbox_inches='tight')
     plt.close()
-

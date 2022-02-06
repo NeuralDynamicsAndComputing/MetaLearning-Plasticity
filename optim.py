@@ -67,9 +67,9 @@ def symmetric_rule(activation, e, params, feedback, Theta):
                 i += 1
 
     # -- feedback update
-    feedback_ = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
-    for i, ((k, B), (k_, _)) in enumerate(zip(feedback.items(), feedback_.items())):
-        params[k] = params[k_]
+    for i, (k, B) in enumerate(feedback.items()):
+        B.update = - torch.exp(lr) * torch.matmul(e[i + 1].T, activation[i])
+        params[k].data = (1 - torch.exp(dr)) * B + B.update
         params[k].adapt = B.adapt
 
     return params

@@ -148,6 +148,12 @@ class Train:
             self.model.fk2.weight.data = self.model.fc2.weight.data
             self.model.fk3.weight.data = self.model.fc3.weight.data
 
+            try:
+                self.Theta[2].data = self.Theta[0].data
+                self.Theta[3].data = self.Theta[1].data
+            except IndexError:
+                pass
+
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
         for key in params:
             params[key].adapt = dict(self.model.named_parameters())[key].adapt
@@ -259,8 +265,8 @@ def parse_args():
     parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lr_meta_fwd', type=float, default=5e-2, help='.')
-    parser.add_argument('--lr_meta_fbk', type=float, default=5e-2, help='.')
+    parser.add_argument('--lr_meta_fwd', type=float, default=5e-3, help='.')
+    parser.add_argument('--lr_meta_fbk', type=float, default=5e-3, help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
