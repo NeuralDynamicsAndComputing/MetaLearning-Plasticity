@@ -3,6 +3,50 @@ import torch
 from torch.nn import functional as F
 
 
+def generic_rule(activation, e, params, feedback, Theta):
+    lr, dr, tre, fur, fiv, six, svn, eit, nin = Theta
+    vec = ['1', '2', '3']
+
+    # -- weight update
+    i = 0
+    for k, p in params.items():
+        if p.adapt and 'fc' in k:
+            if 'weight' in k:
+                p.update = - torch.exp(lr) * torch.matmul(e[i + 1].T, activation[i])
+
+                if '1' in vec:
+                    p.update -= tre * torch.matmul(activation[i + 1].T, e[i])
+                if '2' in vec:
+                    p.update -= fur * torch.matmul(activation[i + 1].T, activation[i])
+                if '3' in vec:
+                    p.update -= fiv * torch.matmul(e[i + 1].T, e[i])
+                if '4' in vec:
+                    p.update -= six * activation[i + 1].T.repeat(1, p.shape[1])
+                if '5' in vec:
+                    p.update -= svn * activation[i].repeat(p.shape[0], 1)
+                if '6' in vec:
+                    p.update -= eit * e[i + 1].T.repeat(1, p.shape[1])
+                if '7' in vec:
+                    p.update -= nin * e[i].repeat(p.shape[0], 1)
+
+                params[k] = (1 - torch.exp(dr)) * p + p.update
+                params[k].adapt = p.adapt
+
+            i += 1
+
+    """# -- feedback update (evolve)
+    for i, (k, B) in enumerate(feedback.items()):
+        B.update = - torch.exp(lr_fk) * torch.matmul(e[i + 1].T, activation[i])
+        params[k] = (1 - torch.exp(dr_fk)) * B + B.update
+        params[k].adapt = B.adapt"""
+
+    """# -- feedback update (symmetric)
+    feedback_ = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
+    for i, ((k, B), (k_, _)) in enumerate(zip(feedback.items(), feedback_.items())):
+        params[k].data = params[k_]
+        params[k].adapt = B.adapt"""
+
+
 def evolve_rule(activation, e, params, feedback, Theta):
     lr_fwd, dr_fwd, lr_fdk, dr_fdk = Theta
     # -- weight update

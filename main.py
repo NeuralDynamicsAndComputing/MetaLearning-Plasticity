@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, plot_meta, plot_adpt
 from dataset import EmnistDataset, OmniglotDataset, DataProcess
-from optim import my_optimizer, symmetric_rule, fixed_feedback, evolve_rule
+from optim import my_optimizer, symmetric_rule, fixed_feedback, evolve_rule, generic_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -85,7 +85,7 @@ class Train:
 
         # -- optimization params
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(symmetric_rule)
+        self.OptimAdpt = my_optimizer(generic_rule)
         self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
                                      {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
 
