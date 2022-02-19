@@ -154,7 +154,7 @@ class Train:
             except IndexError:
                 pass
 
-        params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items()}
+        params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items() if '.' in key}
         for key in params:
             params[key].adapt = dict(self.model.named_parameters())[key].adapt
 
