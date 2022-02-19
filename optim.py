@@ -1,6 +1,6 @@
 import torch
 
-from torch.nn import functional as func
+from torch.nn import functional as F
 
 
 def evolve_rule(activation, e, params, feedback, Theta):
@@ -94,7 +94,7 @@ class my_optimizer:
         """
         # -- error
         feedback = dict({k: v for k, v in params.items() if 'fk' in k})
-        e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - func.one_hot(label, num_classes=47)]
+        e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - F.one_hot(label, num_classes=47)]
         for y, i in zip(reversed(activation), reversed(list(feedback))):
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 

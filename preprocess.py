@@ -41,7 +41,7 @@ def data_process():
     # -- init model
     if model_conv:
         model = MyModel().to(device)
-        path_pretrained = './data/models/omniglot_example/model_stat.pth'
+        path_pretrained = './data/models/model_stat.pth'
         old_model = torch.load(path_pretrained, map_location=device)
         for old_key in old_model:
             try:
