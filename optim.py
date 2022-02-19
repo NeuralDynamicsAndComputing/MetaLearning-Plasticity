@@ -13,12 +13,12 @@ def evolve_rule(activation, e, params, feedback, Theta):
                 p.update = - torch.exp(lr_fwd) * torch.matmul(e[i + 1].T, activation[i])
                 params[k] = (1 - torch.exp(dr_fwd)) * p + p.update
                 params[k].adapt = p.adapt
-            elif 'bias' in k:
-                p.update = - torch.exp(lr_fwd) * e[i + 1].squeeze(0)
-                params[k] = (1 - torch.exp(dr_fwd)) * p + p.update
-                params[k].adapt = p.adapt
+            # elif 'bias' in k:
+            #     p.update = - torch.exp(lr_fwd) * e[i + 1].squeeze(0)
+            #     params[k] = (1 - torch.exp(dr_fwd)) * p + p.update
+            #     params[k].adapt = p.adapt
 
-                i += 1
+            i += 1
 
     # -- feedback update
     for i, (k, B) in enumerate(feedback.items()):
@@ -39,12 +39,12 @@ def fixed_feedback(activation, e, params, feedback, Theta):
                 p.update = - torch.exp(lr) * torch.matmul(e[i+1].T, activation[i])
                 params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt
-            elif 'bias' in k:
-                p.update = - torch.exp(lr) * e[i+1].squeeze(0)
-                params[k] = (1 - torch.exp(dr)) * p + p.update
-                params[k].adapt = p.adapt
+            # elif 'bias' in k:
+            #     p.update = - torch.exp(lr) * e[i+1].squeeze(0)
+            #     params[k] = (1 - torch.exp(dr)) * p + p.update
+            #     params[k].adapt = p.adapt
 
-                i += 1
+            i += 1
 
     return params
 
@@ -59,12 +59,12 @@ def symmetric_rule(activation, e, params, feedback, Theta):
                 p.update = - torch.exp(lr) * torch.matmul(e[i + 1].T, activation[i])
                 params[k] = (1 - torch.exp(dr)) * p + p.update
                 params[k].adapt = p.adapt
-            elif 'bias' in k:
-                p.update = - torch.exp(lr) * e[i + 1].squeeze(0)
-                params[k] = (1 - torch.exp(dr)) * p + p.update
-                params[k].adapt = p.adapt
+            # elif 'bias' in k:
+            #     p.update = - torch.exp(lr) * e[i + 1].squeeze(0)
+            #     params[k] = (1 - torch.exp(dr)) * p + p.update
+            #     params[k].adapt = p.adapt
 
-                i += 1
+            i += 1
 
     # -- feedback update
     for i, (k, B) in enumerate(feedback.items()):

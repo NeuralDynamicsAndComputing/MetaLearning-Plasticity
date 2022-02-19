@@ -30,9 +30,9 @@ class MyModel(nn.Module):
 
         # -- prediction params
         dim_out = 47
-        self.fc1 = nn.Linear(512, 170)
-        self.fc2 = nn.Linear(170, 120)
-        self.fc3 = nn.Linear(120, dim_out)
+        self.fc1 = nn.Linear(512, 170, bias=False)
+        self.fc2 = nn.Linear(170, 120, bias=False)
+        self.fc3 = nn.Linear(120, dim_out, bias=False)
 
         # -- feedback
         self.fk1 = nn.Linear(512, 170, bias=False)
