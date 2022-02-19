@@ -98,7 +98,5 @@ class my_optimizer:
         for y, i in zip(reversed(activation), reversed(list(feedback))):
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
-        # -- update weights
-        params = self.update_rule(activation, e, params, feedback, Theta)
-
-        return params
+        # -- weight update
+        self.update_rule([*activation, F.softmax(logits, dim=1)], e, params, feedback, Theta)

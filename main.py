@@ -214,7 +214,7 @@ class Train:
                     quit()
 
                 # -- update network params
-                params = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
+                self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
 
             """ meta update """
             # -- predict
