@@ -40,10 +40,10 @@ class MyModel(nn.Module):
         self.fk3 = nn.Linear(120, dim_out, bias=False)
 
         # -- learning params
-        self.alpha_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.beta_fwd = nn.Parameter(torch.rand(1) / 100 - 1)
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
+        self.alpha_fwd = nn.Parameter(torch.rand(1) / 100 - 2)
+        self.beta_fwd = nn.Parameter(torch.rand(1) / 100 - 2)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -82,6 +82,14 @@ class Train:
         self.model = self.load_model().to(self.device)
         self.Theta = nn.ParameterList([*self.model.params_fwd, *self.model.params_fbk])
         self.B_init = args.B_init
+
+        # if self.evl:
+        #     if self.B_init == 'W':
+        #         self.Theta[9].data = self.Theta[0].data
+        #         self.Theta[10].data = self.Theta[1].data
+        #     elif self.B_init == 'rand':
+        #         self.Theta[9].data = self.Theta[9].data * 5
+        #         self.Theta[10].data = self.Theta[10].data * 5
 
         # -- optimization params
         self.loss_func = nn.CrossEntropyLoss()
@@ -147,12 +155,6 @@ class Train:
             self.model.fk1.weight.data = self.model.fc1.weight.data
             self.model.fk2.weight.data = self.model.fc2.weight.data
             self.model.fk3.weight.data = self.model.fc3.weight.data
-
-            try:
-                self.Theta[2].data = self.Theta[0].data
-                self.Theta[3].data = self.Theta[1].data
-            except IndexError:
-                pass
 
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items() if '.' in key}
         for key in params:
