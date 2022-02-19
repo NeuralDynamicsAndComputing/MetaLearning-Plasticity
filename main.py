@@ -209,7 +209,8 @@ class Train:
                 y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
 
                 if False:
-                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
+                    filename = self.res_dir + '/comp_grph_adpt'
+                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render(filename, format='png')
                     quit()
 
                 # -- update network params
@@ -219,7 +220,8 @@ class Train:
             # -- predict
             _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
             if False:
-                make_dot(logits, params=dict(list(self.model.named_parameters()))).render('comp_grph', format='png')
+                filename = self.res_dir + '/comp_grph_meta'
+                make_dot(logits, params=dict(list(self.model.named_parameters()))).render(filename, format='png')
                 quit()
 
             # -- compute loss and accuracy
@@ -241,6 +243,8 @@ class Train:
             for idx, param in enumerate(self.Theta):
                 line += '\tMetaParam_{}: {:.6f}'.format(idx+1, torch.exp(param).detach().cpu().numpy()[0])
             print(line)
+            with open(self.res_dir + '/params.txt', 'a') as f:
+                f.writelines(line+'\n')
 
             # -- plot
             if eps % 100 == 1:
