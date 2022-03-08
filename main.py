@@ -228,6 +228,9 @@ class Train:
             acc = self.accuracy(logits, y_qry.reshape(-1))
 
             # -- update params
+            Theta = []
+            for meta_param in self.Theta:
+                Theta.append(meta_param.detach().clone())
             self.OptimMeta.zero_grad()
             loss_meta.backward()
             self.OptimMeta.step()
@@ -239,8 +242,10 @@ class Train:
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
-            for idx, param in enumerate(self.Theta):
-                line += '\tMetaParam_{}: {:.6f}'.format(idx+1, torch.exp(param).detach().cpu().numpy()[0])
+            for idx, param in enumerate(Theta[:2]):
+                line += '\tMetaParam_{}: {:.6f}'.format(idx+1, torch.exp(param).cpu().numpy()[0])
+            for idx, param in enumerate(Theta[2:]):
+                line += '\tMetaParam_{}: {:.6f}'.format(idx+1, param.cpu().numpy()[0])
             print(line)
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
