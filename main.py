@@ -200,9 +200,8 @@ class Train:
             x_trn, y_trn, x_qry, y_qry = self.data_process(data)
 
             """ adaptation """
-            for x, label in zip(x_trn, y_trn):
-
-                # print("GPU Usage")
+            for itr_adapt, (x, label) in enumerate(zip(x_trn, y_trn)):
+                # print('Iter {} GPU Usage'.format(itr_adapt))
                 # gpu_usage()
 
                 # -- stats
