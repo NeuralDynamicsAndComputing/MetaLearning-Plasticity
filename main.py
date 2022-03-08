@@ -25,7 +25,7 @@ torch.manual_seed(0)
 
 
 class MyModel(nn.Module):
-    def __init__(self):
+    def __init__(self, args):
         super(MyModel, self).__init__()
 
         # -- prediction params
@@ -42,8 +42,13 @@ class MyModel(nn.Module):
         # -- learning params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.alpha_fwd = nn.Parameter(torch.rand(1) / 100 - 2)
-        self.beta_fwd = nn.Parameter(torch.rand(1) / 100 - 2)
+        self.alpha_fwd = nn.Parameter(0 * torch.rand(1) + np.log(args.a))
+        self.beta_fwd = nn.Parameter(0 * torch.rand(1) + np.log(args.b))
+        self.tre_fwd = nn.Parameter(0 * torch.rand(1) + args.c)
+        self.fur_fwd = nn.Parameter(0 * torch.rand(1) + args.d)
+        self.fiv_fwd = nn.Parameter(0 * torch.rand(1) + args.e)
+        self.six_fwd = nn.Parameter(0 * torch.rand(1) + args.f)
+        self.svn_fwd = nn.Parameter(0 * torch.rand(1) + args.g)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -79,17 +84,9 @@ class Train:
 
         # -- model params
         self.evl = args.evl
-        self.model = self.load_model().to(self.device)
+        self.model = self.load_model(args).to(self.device)
         self.Theta = nn.ParameterList([*self.model.params_fwd, *self.model.params_fbk])
         self.B_init = args.B_init
-
-        # if self.evl:
-        #     if self.B_init == 'W':
-        #         self.Theta[9].data = self.Theta[0].data
-        #         self.Theta[10].data = self.Theta[1].data
-        #     elif self.B_init == 'rand':
-        #         self.Theta[9].data = self.Theta[9].data * 5
-        #         self.Theta[10].data = self.Theta[10].data * 5
 
         # -- optimization params
         self.loss_func = nn.CrossEntropyLoss()
@@ -100,13 +97,13 @@ class Train:
         # -- log params
         self.res_dir = args.res_dir
 
-    def load_model(self):
+    def load_model(self, args):
         """
             Loads pretrained parameters for the convolutional layers and sets adaptation and meta training flags for
             parameters.
         """
         # -- init model
-        model = MyModel()
+        model = MyModel(args)
 
         # -- learning flags
         for key, val in model.named_parameters():
@@ -273,6 +270,13 @@ def parse_args():
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta_fwd', type=float, default=5e-3, help='.')
     parser.add_argument('--lr_meta_fbk', type=float, default=5e-3, help='.')
+    parser.add_argument('--a', type=float, default=5e-2, help='Initial value for Meta-Parameter.')
+    parser.add_argument('--b', type=float, default=5e-2, help='Initial value for Meta-Parameter.')
+    parser.add_argument('--c', type=float, default=0., help='Initial value for Meta-Parameter.')
+    parser.add_argument('--d', type=float, default=0., help='Initial value for Meta-Parameter.')
+    parser.add_argument('--e', type=float, default=0., help='Initial value for Meta-Parameter.')
+    parser.add_argument('--f', type=float, default=0., help='Initial value for Meta-Parameter.')
+    parser.add_argument('--g', type=float, default=0., help='Initial value for Meta-Parameter.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
