@@ -190,7 +190,7 @@ class Train:
         for eps, data in enumerate(self.meta_dataset):
 
             # -- initialize
-            loss, accuracy = [], []
+            loss, accuracy, meta_grad = [], [], []
             params = self.reinitialize()
 
             # -- training data
@@ -234,6 +234,11 @@ class Train:
                 Theta.append(meta_param.detach().clone())
             self.OptimMeta.zero_grad()
             loss_meta.backward()
+            for param in self.Theta:
+                try:
+                    meta_grad.append(param.grad.detach().cpu().numpy())
+                except AttributeError:
+                    pass
             self.OptimMeta.step()
 
             # -- log
@@ -241,6 +246,7 @@ class Train:
             log(loss, self.res_dir + '/loss.txt')
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
+            log(meta_grad, self.res_dir + '/meta_grad.txt')
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
             for idx, param in enumerate(Theta[:2]):
