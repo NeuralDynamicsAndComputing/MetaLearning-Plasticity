@@ -33,12 +33,14 @@ class MyModel(nn.Module):
         dim_out = 47
         self.fc1 = nn.Linear(512, 170, bias=False)
         self.fc2 = nn.Linear(170, 120, bias=False)
-        self.fc3 = nn.Linear(120, dim_out, bias=False)
+        self.fc3 = nn.Linear(120, 70, bias=False)
+        self.fc4 = nn.Linear(70, dim_out, bias=False)
 
         # -- feedback
         self.fk1 = nn.Linear(512, 170, bias=False)
         self.fk2 = nn.Linear(170, 120, bias=False)
-        self.fk3 = nn.Linear(120, dim_out, bias=False)
+        self.fk3 = nn.Linear(120, 70, bias=False)
+        self.fk4 = nn.Linear(70, dim_out, bias=False)
 
         # -- learning params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
@@ -62,12 +64,13 @@ class MyModel(nn.Module):
 
     def forward(self, x):
 
-        y6 = x.squeeze(1)
+        y0 = x.squeeze(1)
 
-        y7 = self.sopl(self.fc1(y6))
-        y8 = self.sopl(self.fc2(y7))
+        y1 = self.sopl(self.fc1(y0))
+        y2 = self.sopl(self.fc2(y1))
+        y3 = self.sopl(self.fc3(y2))
 
-        return (y6, y7, y8), self.fc3(y8)
+        return (y0, y1, y2, y3), self.fc4(y3)
 
 
 class Train:
