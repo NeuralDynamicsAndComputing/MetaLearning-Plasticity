@@ -8,6 +8,7 @@ import numpy as np
 
 from git import Repo
 from torch import nn, optim
+from random import randrange
 from torchviz import make_dot
 from torch.nn.utils import _stateless
 from torch.nn import functional as func
@@ -267,6 +268,7 @@ def parse_args():
     # -- data params
     parser.add_argument('--database', type=str, default='emnist', help='The database.')
     parser.add_argument('--dim', type=int, default=28, help='The dimension of the training data.')
+    parser.add_argument('--test_name', type=str, default='', help='Test folder name.')
 
     # -- meta-training params
     parser.add_argument('--episodes', type=int, default=501, help='The number of training episodes.')
@@ -295,8 +297,8 @@ def parse_args():
     # -- storage settings
     s_dir = os.getcwd()
     local_repo = Repo(path=s_dir)
-    args.res_dir = os.path.join(s_dir, args.res, local_repo.active_branch.name,
-                                datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    args.res_dir = os.path.join( s_dir, args.res, local_repo.active_branch.name, args.test_name,
+                                datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_') + str(randrange(40)))
     os.makedirs(args.res_dir)
 
     # -- GPU settings
