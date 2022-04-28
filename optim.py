@@ -3,8 +3,7 @@ import torch
 from torch.nn import functional as F
 
 
-def generic_rule(activation, e, params, feedback, Theta):
-    vec = ['1', '3', '8', '9', '11']
+def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
     lr, dr, tre, fur, fiv, six, svn, eit, nin, ten, elv, twl, trt, frt, fif, sxt, svt, etn, ntn = Theta
 
     # -- weight update
@@ -36,11 +35,12 @@ def generic_rule(activation, e, params, feedback, Theta):
         params[k] = (1 - torch.exp(dr_fk)) * B + B.update
         params[k].adapt = B.adapt"""
 
-    """# -- feedback update (symmetric)
-    feedback_ = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
-    for i, ((k, B), (k_, _)) in enumerate(zip(feedback.items(), feedback_.items())):
-        params[k].data = params[k_]
-        params[k].adapt = B.adapt"""
+    if fbk == 'sym':
+        # -- feedback update (symmetric)
+        feedback_ = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
+        for i, ((k, B), (k_, _)) in enumerate(zip(feedback.items(), feedback_.items())):
+            params[k].data = params[k_]
+            params[k].adapt = B.adapt
 
 
 def evolve_rule(activation, e, params, feedback, Theta):
@@ -116,8 +116,10 @@ def symmetric_rule(activation, e, params, feedback, Theta):
 
 
 class my_optimizer:
-    def __init__(self, update_rule):
+    def __init__(self, update_rule, vec, fbk):
         self.update_rule = update_rule
+        self.vec = vec
+        self.fbk = fbk
 
     def __call__(self, params, logits, label, activation, Beta, Theta):
 
@@ -139,4 +141,5 @@ class my_optimizer:
             e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
         # -- weight update
-        self.update_rule([*activation, F.softmax(logits, dim=1)], e, params, feedback, Theta)
+        self.update_rule([*activation, F.softmax(logits, dim=1)], e, params, feedback, Theta, self.vec, self.fbk)
+
