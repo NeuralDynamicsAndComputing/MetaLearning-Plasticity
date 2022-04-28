@@ -70,52 +70,6 @@ def evolve_rule(activation, e, params, feedback, Theta):
     return params
 
 
-def fixed_feedback(activation, e, params, feedback, Theta):
-    lr, dr = Theta
-    # -- weight update
-    i = 0
-    for k, p in params.items():
-        if p.adapt:
-            if 'weight' in k:
-                p.update = - torch.exp(lr) * torch.matmul(e[i+1].T, activation[i])
-                params[k] = (1 - torch.exp(dr)) * p + p.update
-                params[k].adapt = p.adapt
-            # elif 'bias' in k:
-            #     p.update = - torch.exp(lr) * e[i+1].squeeze(0)
-            #     params[k] = (1 - torch.exp(dr)) * p + p.update
-            #     params[k].adapt = p.adapt
-
-            i += 1
-
-    return params
-
-
-def symmetric_rule(activation, e, params, feedback, Theta):
-    lr, dr = Theta
-    # -- weight update
-    i = 0
-    for k, p in params.items():
-        if p.adapt:
-            if 'weight' in k:
-                p.update = - torch.exp(lr) * torch.matmul(e[i + 1].T, activation[i])
-                params[k] = (1 - torch.exp(dr)) * p + p.update
-                params[k].adapt = p.adapt
-            # elif 'bias' in k:
-            #     p.update = - torch.exp(lr) * e[i + 1].squeeze(0)
-            #     params[k] = (1 - torch.exp(dr)) * p + p.update
-            #     params[k].adapt = p.adapt
-
-            i += 1
-
-    # -- feedback update
-    for i, (k, B) in enumerate(feedback.items()):
-        B.update = - torch.exp(lr) * torch.matmul(e[i + 1].T, activation[i])
-        params[k].data = (1 - torch.exp(dr)) * B + B.update
-        params[k].adapt = B.adapt
-
-    return params
-
-
 class my_optimizer:
     def __init__(self, update_rule, vec, fbk):
         self.update_rule = update_rule
