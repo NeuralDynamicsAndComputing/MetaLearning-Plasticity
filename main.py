@@ -15,7 +15,7 @@ from torch.nn import functional as func
 # from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
 
-from utils import log, plot_meta, plot_adpt
+from utils import log
 from dataset import EmnistDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
 
@@ -276,13 +276,6 @@ class Train:
             print(line)
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
-
-            # -- plot
-            if eps % 100 == 1:
-                plot_meta('loss_meta.txt', 'Meta loss', [0, 5], self.K, self.res_dir)
-                plot_meta('acc_meta.txt', 'Meta accuracy', [0, 1], self.K, self.res_dir)
-                plot_adpt('loss.txt', 'Adaptation loss', [0, 5], self.K, self.res_dir)
-                plot_adpt('acc.txt', 'Adaptation accuracy', [0, 1], self.K, self.res_dir)
 
 
 def parse_args():
