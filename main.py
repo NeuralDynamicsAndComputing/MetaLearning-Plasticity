@@ -208,7 +208,7 @@ class Train:
         for eps, data in enumerate(self.meta_dataset):
 
             # -- initialize
-            loss, accuracy, meta_grad = [], [], []
+            loss, accuracy, angles, meta_grad = [], [], [], []
             params = self.reinitialize()
 
             # -- training data
@@ -231,7 +231,8 @@ class Train:
                     quit()
 
                 # -- update network params
-                self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
+                angle = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
+                angles.append(angle)
 
             """ meta update """
             # -- predict
@@ -263,6 +264,8 @@ class Train:
             log(loss, self.res_dir + '/loss.txt')
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
+            log(angle, self.res_dir + '/ang_meta.txt')
+            log(angles, self.res_dir + '/ang.txt')
             log(meta_grad, self.res_dir + '/meta_grad.txt')
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)

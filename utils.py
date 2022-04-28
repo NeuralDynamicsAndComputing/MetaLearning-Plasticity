@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 
 
 def log(data, filename):
@@ -31,3 +32,19 @@ def plot_adpt(filename, title, y_lim, K, res_dir, data_type='.png'):
     plt.ylim(y_lim)
     plt.savefig(res_dir + '/' + title + '_K' + str(K) + data_type, bbox_inches='tight')
     plt.close()
+
+def normalize_vec(vector):
+    """
+        normalize input vector.
+    """
+    return vector / torch.linalg.norm(vector)
+
+
+def measure_angle(v1, v2):
+    """
+        Compute angle between two vectors.
+    """
+    n1 = normalize_vec(v1.squeeze())
+    n2 = normalize_vec(v2.squeeze())
+
+    return np.nan_to_num((torch.acos(torch.einsum('i, i -> ', n1, n2)) * 180 / torch.pi).cpu().numpy())
