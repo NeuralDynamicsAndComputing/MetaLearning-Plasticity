@@ -290,7 +290,7 @@ def parse_args():
     parser.add_argument('--test_name', type=str, default='', help='Test folder name.')
 
     # -- meta-training params
-    parser.add_argument('--episodes', type=int, default=501, help='The number of training episodes.')
+    parser.add_argument('--episodes', type=int, default=10002, help='The number of training episodes.')
     parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
@@ -377,6 +377,9 @@ def main():
     my_train = Train(meta_dataset, args)
     my_train()
 
+    # todo: plot here
+
 
 if __name__ == '__main__':
     main()
+
