@@ -31,27 +31,41 @@ class MyModel(nn.Module):
 
         # -- prediction params
         dim_out = 47
-        self.fc1 = nn.Linear(512, 170, bias=False)
-        self.fc2 = nn.Linear(170, 120, bias=False)
-        self.fc3 = nn.Linear(120, 70, bias=False)
-        self.fc4 = nn.Linear(70, dim_out, bias=False)
+        self.fc1 = nn.Linear(784, 170, bias=False)
+        self.fc2 = nn.Linear(170, 130, bias=False)
+        self.fc3 = nn.Linear(130, 100, bias=False)
+        self.fc4 = nn.Linear(100, 70, bias=False)
+        self.fc5 = nn.Linear(70, dim_out, bias=False)
 
         # -- feedback
-        self.fk1 = nn.Linear(512, 170, bias=False)
-        self.fk2 = nn.Linear(170, 120, bias=False)
-        self.fk3 = nn.Linear(120, 70, bias=False)
-        self.fk4 = nn.Linear(70, dim_out, bias=False)
+        self.fk1 = nn.Linear(784, 170, bias=False)
+        self.fk2 = nn.Linear(170, 130, bias=False)
+        self.fk3 = nn.Linear(130, 100, bias=False)
+        self.fk4 = nn.Linear(100, 70, bias=False)
+        self.fk5 = nn.Linear(70, dim_out, bias=False)
 
         # -- learning params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.alpha_fwd = nn.Parameter(0 * torch.rand(1) + np.log(args.a))
-        self.beta_fwd = nn.Parameter(0 * torch.rand(1) + np.log(args.b))
-        self.tre_fwd = nn.Parameter(0 * torch.rand(1) + args.c)
-        self.fur_fwd = nn.Parameter(0 * torch.rand(1) + args.d)
-        self.fiv_fwd = nn.Parameter(0 * torch.rand(1) + args.e)
-        self.six_fwd = nn.Parameter(0 * torch.rand(1) + args.f)
-        self.svn_fwd = nn.Parameter(0 * torch.rand(1) + args.g)
+        self.alpha_fwd = nn.Parameter(torch.log(torch.tensor(args.a).float()))
+        self.beta_fwd = nn.Parameter(torch.log(torch.tensor(args.b).float()))
+        self.tre_fwd = nn.Parameter(torch.tensor(args.c).float())
+        self.fur_fwd = nn.Parameter(torch.tensor(args.d).float())
+        self.fiv_fwd = nn.Parameter(torch.tensor(args.e).float())
+        self.six_fwd = nn.Parameter(torch.tensor(args.f).float())
+        self.svn_fwd = nn.Parameter(torch.tensor(args.g).float())
+        self.eit_fwd = nn.Parameter(torch.tensor(args.h).float())
+        self.nin_fwd = nn.Parameter(torch.tensor(args.i).float())
+        self.ten_fwd = nn.Parameter(torch.tensor(args.j).float())
+        self.elv_fwd = nn.Parameter(torch.tensor(args.k).float())
+        self.twl_fwd = nn.Parameter(torch.tensor(args.l).float())
+        self.trt_fwd = nn.Parameter(torch.tensor(args.m).float())
+        self.frt_fwd = nn.Parameter(torch.tensor(args.n).float())
+        self.fif_fwd = nn.Parameter(torch.tensor(args.o).float())
+        self.sxt_fwd = nn.Parameter(torch.tensor(args.p).float())
+        self.svt_fwd = nn.Parameter(torch.tensor(args.q).float())
+        self.etn_fwd = nn.Parameter(torch.tensor(args.r).float())
+        self.ntn_fwd = nn.Parameter(torch.tensor(args.s).float())
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -69,8 +83,9 @@ class MyModel(nn.Module):
         y1 = self.sopl(self.fc1(y0))
         y2 = self.sopl(self.fc2(y1))
         y3 = self.sopl(self.fc3(y2))
+        y4 = self.sopl(self.fc4(y3))
 
-        return (y0, y1, y2, y3), self.fc4(y3)
+        return (y0, y1, y2, y3, y4), self.fc5(y4)
 
 
 class Train:
@@ -252,9 +267,9 @@ class Train:
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
             for idx, param in enumerate(Theta[:2]):
-                line += '\tMetaParam_{}: {:.6f}'.format(idx+1, torch.exp(param).cpu().numpy()[0])
+                line += '\tMetaParam_{}: {:.6f}'.format(idx + 1, torch.exp(param).cpu().numpy())
             for idx, param in enumerate(Theta[2:]):
-                line += '\tMetaParam_{}: {:.6f}'.format(idx+1, param.cpu().numpy()[0])
+                line += '\tMetaParam_{}: {:.6f}'.format(idx + 1, param.cpu().numpy())
             print(line)
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
@@ -285,13 +300,25 @@ def parse_args():
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta_fwd', type=float, default=5e-3, help='.')
     parser.add_argument('--lr_meta_fbk', type=float, default=5e-3, help='.')
-    parser.add_argument('--a', type=float, default=5e-2, help='Initial value for Meta-Parameter.')
-    parser.add_argument('--b', type=float, default=5e-2, help='Initial value for Meta-Parameter.')
-    parser.add_argument('--c', type=float, default=0., help='Initial value for Meta-Parameter.')
-    parser.add_argument('--d', type=float, default=0., help='Initial value for Meta-Parameter.')
-    parser.add_argument('--e', type=float, default=0., help='Initial value for Meta-Parameter.')
-    parser.add_argument('--f', type=float, default=0., help='Initial value for Meta-Parameter.')
-    parser.add_argument('--g', type=float, default=0., help='Initial value for Meta-Parameter.')
+    parser.add_argument('--a', type=float, default=5e-3, help='.')
+    parser.add_argument('--b', type=float, default=5e-5, help='.')
+    parser.add_argument('--c', type=float, default=0., help='.')
+    parser.add_argument('--d', type=float, default=0., help='.')
+    parser.add_argument('--e', type=float, default=0., help='.')
+    parser.add_argument('--f', type=float, default=0., help='.')
+    parser.add_argument('--g', type=float, default=0., help='.')
+    parser.add_argument('--h', type=float, default=0., help='.')
+    parser.add_argument('--i', type=float, default=0., help='.')
+    parser.add_argument('--j', type=float, default=0., help='.')
+    parser.add_argument('--k', type=float, default=0., help='.')
+    parser.add_argument('--l', type=float, default=0., help='.')
+    parser.add_argument('--m', type=float, default=0., help='.')
+    parser.add_argument('--n', type=float, default=0., help='.')
+    parser.add_argument('--o', type=float, default=0., help='.')
+    parser.add_argument('--p', type=float, default=0., help='.')
+    parser.add_argument('--q', type=float, default=0., help='.')
+    parser.add_argument('--r', type=float, default=0., help='.')
+    parser.add_argument('--s', type=float, default=0., help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')

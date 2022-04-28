@@ -4,8 +4,8 @@ from torch.nn import functional as F
 
 
 def generic_rule(activation, e, params, feedback, Theta):
-    lr, dr, tre, fiv, ten, elv, trt = Theta
     vec = ['1', '3', '8', '9', '11']
+    lr, dr, tre, fur, fiv, six, svn, eit, nin, ten, elv, twl, trt, frt, fif, sxt, svt, etn, ntn = Theta
 
     # -- weight update
     i = 0

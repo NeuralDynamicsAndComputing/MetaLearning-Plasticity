@@ -104,7 +104,7 @@ class EmnistDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
-            if False:
+            if True:
                 if 'png' in img_:
                     img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
             else:
@@ -159,7 +159,7 @@ class OmniglotDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]): 
-            if False:
+            if True:
                 if 'png' in img_:
                     img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
             else:
@@ -181,7 +181,7 @@ class DataProcess:
         self.device = device
         self.iid = iid
         self.dim = dim
-        self.dim_ = 512
+        self.dim_ = 784
 
     def __call__(self, data):
 
@@ -199,3 +199,4 @@ class DataProcess:
             y_trn = y_trn[perm]
 
         return x_trn, y_trn, x_qry, y_qry
+
