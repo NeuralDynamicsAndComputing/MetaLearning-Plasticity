@@ -89,7 +89,7 @@ class MyModel(nn.Module):
 
 
 class MetaLearner:
-    def __init__(self, meta_dataset, args):
+    def __init__(self, metatrain_dataset, args):
 
         # -- processor params
         self.device = args.device
@@ -97,7 +97,7 @@ class MetaLearner:
         # -- data params
         self.K = args.K
         self.database = args.database
-        self.meta_dataset = meta_dataset
+        self.metatrain_dataset = metatrain_dataset
         self.data_process = DataProcess(M=args.M, K=self.K, Q=args.Q, database=self.database, dim=args.dim,
                                         device=self.device)
 
@@ -206,7 +206,7 @@ class MetaLearner:
             Model training.
         """
         self.model.train()
-        for eps, data in enumerate(self.meta_dataset):
+        for eps, data in enumerate(self.metatrain_dataset):
 
             # -- initialize
             loss, accuracy, angles, meta_grad = [], [], [], []
@@ -278,8 +278,8 @@ class MetaLearner:
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
 
+        # -- plot
         self.plot()
-        # todo: save model
 
     def test(self):
         pass
@@ -375,14 +375,14 @@ def main():
     elif args.database == 'omniglot':
         dataset = OmniglotDataset(K=args.K, Q=args.Q, dim=args.dim)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
-    meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
-    # todo: load test data
+    metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
     # -- train model
     # print("Initial GPU Usage")
     # gpu_usage()
 
-    metaplasticity_model = MetaLearner(meta_dataset, args)
+    # -- meta train
+    metaplasticity_model = MetaLearner(metatrain_dataset, args)
     metaplasticity_model.train()
 
     # todo: metaplasticity_model.test()
