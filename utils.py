@@ -7,39 +7,33 @@ import matplotlib.pyplot as plt
 
 
 class Plot:
-    def __init__(self, n=5000, adpt_idx=[0, 10, 400, 1000, 1100, 1200, 2900, 4900], save_dir='./results/New_Tests/figures/'):
-        self.N = n
+    def __init__(self, res_dir, adpt_idx=[0, 10, 400, 1000, 1100, 1200, 2900, 4900]):
         self.adpt_idx = adpt_idx
-        self.save_dir = save_dir
+        self.res_dir = res_dir
 
-        for folder in ['Meta acc', 'Meta param', 'Adapt acc', 'Adapt loss', 'Meta ang', 'Meta loss']:
-            my_folder = os.path.join(save_dir, folder)
-            if not os.path.exists(my_folder):
-                os.mkdir(my_folder)
-
-    def meta_accuracy(self, res_dir, test_name):
+    def meta_accuracy(self):
         """
             meta accuracy
         """
 
-        y = np.nan_to_num(np.loadtxt(res_dir + '/acc_meta.txt'))[:self.N]
+        y = np.nan_to_num(np.loadtxt(self.res_dir + '/acc_meta.txt'))
         plt.plot(np.array(range(len(y))), y)
         plt.title('Meta Accuracy')
         plt.ylim([0, 1])
-        plt.xlim([0, self.N])
-        plt.savefig(self.save_dir + 'Meta acc/' + test_name, bbox_inches='tight')
+        # plt.xlim([0, self.N])
+        plt.savefig(self.res_dir + '/meta_accuracy', bbox_inches='tight')
         plt.close()
 
-    def meta_parameters(self, res_dir, test_name):
+    def meta_parameters(self):
         """
             meta parameters
         """
-
+        # fixme: read 'vec' and use for plotting and legend
         # -- read meta params
-        with open(res_dir + '/params.txt', 'r') as f:
+        with open(self.res_dir + '/params.txt', 'r') as f:
             strings = re.findall(r'(-?\d+\.\d+|nan)', f.read())
 
-        y = np.nan_to_num(np.asarray([float(i) for i in strings])).reshape(-1, 21)[:self.N]
+        y = np.nan_to_num(np.asarray([float(i) for i in strings])).reshape(-1, 21)
         meta_param_lr_dr = y[:, 2:4]
         meta_param_terms = y[:, 4:]
 
@@ -51,34 +45,37 @@ class Plot:
         plt.plot(range(len(y)), meta_param_lr_dr[:, 0], color=cmap(0))
 
         # -- arbitrary and bio-inspired terms
-        for idx, term in enumerate(re.findall(r'(\d+)', test_name)):
-            my_legend.append('Term {}'.format(int(term)))
+        for i in range(meta_param_terms.shape[1]):  # fixme: temp
+            plt.plot(range(len(y)), meta_param_terms[:, i], color=cmap(i))
 
-            # -- adjust meta param indices for arbitrary terms
-            if 'arb' in test_name:
-                plt.plot(range(len(y)), meta_param_terms[:, int(term)-1], color=cmap(idx+1))
+        # for idx, term in enumerate(re.findall(r'(\d+)', test_name)): # fixme: use 'vec' instead of 'test_name'
+        #     my_legend.append('Term {}'.format(int(term))) fixme
+        #
+        #     -- adjust meta param indices for arbitrary terms
+        #     if 'arb' in test_name: # fixme: use 'vec' instead of 'test_name'
+        #         plt.plot(range(len(y)), meta_param_terms[:, int(term)-1], color=cmap(idx+1))
+        #
+        #     # -- adjust meta param indices for bio-inspired terms
+        #     elif 'bio' in test_name:
+        #         plt.plot(range(len(y)), meta_param_terms[:, int(term)-8], color=cmap(idx+1))
+        #
+        #         # -- adjust meta param index for homeostatic term
+        #         if '12' in term:
+        #             plt.plot(range(len(y)), meta_param_terms[:, 5], color=cmap(idx+2))
+        #             my_legend.append('Term {}.b'.format(int(term)))
 
-            # -- adjust meta param indices for bio-inspired terms
-            elif 'bio' in test_name:
-                plt.plot(range(len(y)), meta_param_terms[:, int(term)-8], color=cmap(idx+1))
-
-                # -- adjust meta param index for homeostatic term
-                if '12' in term:
-                    plt.plot(range(len(y)), meta_param_terms[:, 5], color=cmap(idx+2))
-                    my_legend.append('Term {}.b'.format(int(term)))
-
-        plt.legend(my_legend)
+        # plt.legend(my_legend)  fixme
         plt.title('Meta parameters')
         # plt.ylim([0, 1])
-        plt.savefig(self.save_dir + 'Meta param/' + test_name, bbox_inches='tight')
+        plt.savefig(self.res_dir + '/meta_params', bbox_inches='tight')
         plt.close()
 
-    def adapt_accuracy(self, res_dir, test_name):
+    def adapt_accuracy(self):
         """
             adaptation accuracy
         """
 
-        y = np.nan_to_num(np.loadtxt(res_dir + '/acc.txt'))[:self.N]
+        y = np.nan_to_num(np.loadtxt(self.res_dir + '/acc.txt'))
 
         for idx in self.adpt_idx:
             try:
@@ -90,15 +87,15 @@ class Plot:
         plt.legend(self.adpt_idx)
 
         plt.title('Adaptation loss')
-        plt.savefig(self.save_dir + 'Adapt acc/' + test_name, bbox_inches='tight')
+        plt.savefig(self.res_dir + '/adapt_accuracy', bbox_inches='tight')
         plt.close()
 
-    def adapt_loss(self, res_dir, test_name):
+    def adapt_loss(self):
         """
             adaptation loss
         """
 
-        y = np.nan_to_num(np.loadtxt(res_dir + '/loss.txt'))[:self.N]
+        y = np.nan_to_num(np.loadtxt(self.res_dir + '/loss.txt'))
 
         for idx in self.adpt_idx:
             try:
@@ -110,50 +107,44 @@ class Plot:
         plt.legend(self.adpt_idx)
 
         plt.title('Adaptation loss')
-        plt.savefig(self.save_dir + 'Adapt loss/' + test_name, bbox_inches='tight')
+        plt.savefig(self.res_dir + '/adapt_loss', bbox_inches='tight')
         plt.close()
 
-    def meta_angles(self, res_dir, test_name):
+    def meta_angles(self):
         """
             meta angles
         """
 
-        y = np.nan_to_num(np.loadtxt(res_dir + '/ang_meta.txt'))[:self.N]
+        y = np.nan_to_num(np.loadtxt(self.res_dir + '/ang_meta.txt'))
 
         for idx in range(y.shape[1] - 1):
             plt.plot(range(len(y)), y[:, idx])
             plt.legend(['1', '2', '3', '4', '5', '6'])
 
         plt.title('Meta Angles')
-        plt.xlim([0, self.N])
-        plt.savefig(self.save_dir + 'Meta ang/' + test_name, bbox_inches='tight')
+        plt.savefig(self.res_dir + '/meta_angle', bbox_inches='tight')
         plt.close()
 
-    def meta_loss(self, res_dir, test_name):
+    def meta_loss(self):
         """
             meta loss
         """
 
-        y = np.nan_to_num(np.loadtxt(res_dir + '/loss_meta.txt'))[:self.N]
+        y = np.nan_to_num(np.loadtxt(self.res_dir + '/loss_meta.txt'))
         plt.plot(np.array(range(len(y))), y)
         plt.title('Meta Loss')
         plt.ylim([0, 5])
-        plt.xlim([0, self.N])
-        plt.savefig(self.save_dir + 'Meta loss/' + test_name, bbox_inches='tight')
+        plt.savefig(self.res_dir + '/meta_loss', bbox_inches='tight')
         plt.close()
 
     def __call__(self, *args, **kwargs):
-        filename = 'New_Tests/trunk'
-        for test_name in [folders for _, folders, _ in os.walk(os.path.join('./results/', filename))][0]:
-            for folder in [folders for _, folders, _ in os.walk(os.path.join('./results/', filename, test_name))][0]:
-                res_dir = os.path.join('./results/', filename, test_name, folder)
 
-                self.meta_accuracy(res_dir, test_name)
-                self.meta_parameters(res_dir, test_name)
-                self.adapt_accuracy(res_dir, test_name)
-                self.adapt_loss(res_dir, test_name)
-                self.meta_angles(res_dir, test_name)
-                self.meta_loss(res_dir, test_name)
+        self.meta_accuracy()
+        self.meta_parameters()
+        self.adapt_accuracy()
+        self.adapt_loss()
+        self.meta_angles()
+        self.meta_loss()
 
 
 def log(data, filename):
