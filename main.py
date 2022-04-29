@@ -15,7 +15,7 @@ from torch.nn import functional as func
 # from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
 
-from utils import log
+from utils import log, Plot
 from dataset import EmnistDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
 
@@ -115,6 +115,7 @@ class Train:
 
         # -- log params
         self.res_dir = args.res_dir
+        self.plot = Plot(self.res_dir)
 
     def load_model(self, args):
         """
@@ -277,6 +278,7 @@ class Train:
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
 
+        self.plot()
 
 def parse_args():
     desc = "Pytorch implementation of meta-plasticity model."
@@ -377,7 +379,6 @@ def main():
     my_train = Train(meta_dataset, args)
     my_train()
 
-    # todo: plot here
 
 
 if __name__ == '__main__':
