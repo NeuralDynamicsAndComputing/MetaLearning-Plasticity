@@ -16,7 +16,7 @@ from torch.nn import functional as func
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, Plot
-from dataset import EmnistDataset, OmniglotDataset, DataProcess
+from dataset import MNISTDataset, EmnistDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)

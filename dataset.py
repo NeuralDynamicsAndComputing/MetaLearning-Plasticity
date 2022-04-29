@@ -12,6 +12,37 @@ import numpy as np
 import torchvision.transforms as transforms
 
 
+class MNISTDataset(Dataset):
+    def __init__(self, K, Q=5):
+
+        self.mnist_dir = './data/MNIST/'
+
+        self.K = K
+        self.Q = Q
+
+        self.char_path = [folder for folder, folders, _ in os.walk(self.mnist_dir) if not folders]
+        self.transform = transforms.Compose([transforms.ToTensor()])
+
+    def __len__(self):
+        return len(self.char_path)
+
+    def __getitem__(self, idx):
+
+        img = []
+        for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
+            if True:
+                if 'png' in img_:
+                    img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
+            else:
+                if 'pt' in img_:
+                    img.append(torch.load(self.char_path[idx] + '/' + img_))
+
+        img = torch.cat(img)
+        idx_vec = idx * torch.ones_like(torch.empty(890), dtype=int)
+
+        return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
+
+
 class EmnistDataset(Dataset):
     def __init__(self, K, Q=5):
         try:
