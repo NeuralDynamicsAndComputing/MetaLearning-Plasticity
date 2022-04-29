@@ -153,6 +153,7 @@ def log(data, filename):
         np.savetxt(f, np.array(data), newline=' ', fmt='%0.6f')
         f.writelines('\n')
 
+
 def normalize_vec(vector):
     """
         normalize input vector.

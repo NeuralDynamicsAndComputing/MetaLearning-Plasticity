@@ -359,7 +359,7 @@ def parse_args():
     # -- model params
     parser.add_argument('--B_init', type=str, default='W',
                         help='Feedback initialization method: 1) B_init.T = rand; 2) B_init.T = W.')
-    parser.add_argument('--vec', nargs='*', default =[] ,help='Learning rule terms.')
+    parser.add_argument('--vec', nargs='*', default=[], help='Learning rule terms.')
     parser.add_argument('--fbk', type=str, default='sym',
                         help='Feedback matrix type: 1) sym = Symmetric matrix; 2) fix = Fixed random matrix.')
 
@@ -421,4 +421,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
