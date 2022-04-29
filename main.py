@@ -88,7 +88,7 @@ class MyModel(nn.Module):
         return (y0, y1, y2, y3, y4), self.fc5(y4)
 
 
-class Train:
+class MetaLearner:
     def __init__(self, meta_dataset, args):
 
         # -- processor params
@@ -201,7 +201,7 @@ class Train:
 
         return loss, accuracy
 
-    def __call__(self):
+    def train(self):
         """
             Model training.
         """
@@ -279,6 +279,11 @@ class Train:
                 f.writelines(line+'\n')
 
         self.plot()
+        # todo: save model
+
+    def test(self):
+        pass
+
 
 def parse_args():
     desc = "Pytorch implementation of meta-plasticity model."
@@ -293,7 +298,7 @@ def parse_args():
 
     # -- meta-training params
     parser.add_argument('--episodes', type=int, default=10002, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=20, help='The number of training datapoints per class.')
+    parser.add_argument('--K', type=int, default=50, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lr_meta_fwd', type=float, default=5e-3, help='.')
@@ -371,13 +376,16 @@ def main():
         dataset = OmniglotDataset(K=args.K, Q=args.Q, dim=args.dim)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     meta_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
+    # todo: load test data
 
     # -- train model
     # print("Initial GPU Usage")
     # gpu_usage()
 
-    my_train = Train(meta_dataset, args)
-    my_train()
+    metaplasticity_model = MetaLearner(meta_dataset, args)
+    metaplasticity_model.train()
+
+    # todo: metaplasticity_model.test()
 
 
 
