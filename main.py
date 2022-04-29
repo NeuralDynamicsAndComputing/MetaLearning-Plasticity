@@ -281,8 +281,38 @@ class MetaLearner:
         # -- plot
         self.plot()
 
-    def test(self):
-        pass
+    def test(self, metatest_dataset):
+        """
+            Meta testing.
+        """
+        self.model.train()
+
+        for eps, data in enumerate(metatest_dataset):
+            # -- initialize
+            loss, accuracy = [], []
+            params = self.reinitialize()
+
+            # -- training data
+            x_trn, y_trn, x_qry, y_qry = self.data_process(data)
+
+            """ train """
+            for itr_adapt, (x, label) in enumerate(zip(x_trn, y_trn)):
+
+                # -- stats
+                loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
+
+                # -- predict
+                y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
+
+                # -- update network params
+                _ = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
+
+            # -- compute loss and accuracy
+            loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
+
+            # -- log
+            log(accuracy, self.res_dir + '/acc_test.txt')
+            log(loss, self.res_dir + '/loss_test.txt')
 
 
 def parse_args():
