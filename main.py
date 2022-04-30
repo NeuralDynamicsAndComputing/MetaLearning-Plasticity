@@ -415,8 +415,15 @@ def main():
     metaplasticity_model = MetaLearner(metatrain_dataset, args)
     metaplasticity_model.train()
 
-    # todo: metaplasticity_model.test()
+    # -- meta test: MNIST
+    dataset = MNISTDataset(K=args.K, Q=args.Q)
+    metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
+    metaplasticity_model.test(metatest_dataset)
 
+    # -- meta test: Omniglot
+    # dataset = OmniglotDataset(K=args.K, Q=args.Q, dim=args.dim)
+    # metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
+    # metaplasticity_model.test(metatest_dataset)
 
 
 if __name__ == '__main__':
