@@ -16,7 +16,7 @@ from torch.nn import functional as func
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, Plot
-from dataset import MNISTDataset, EmnistDataset, OmniglotDataset, DataProcess
+from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -418,6 +418,10 @@ def main():
     metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
     metaplasticity_model.test(metatest_dataset, 'MNIST')
 
+    # -- meta-test: FashionMNIST
+    dataset = FashionMNISTDataset(K=args.K, Q=args.Q)
+    metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
+    metaplasticity_model.test(metatest_dataset, 'FashionMNIST')
 
 
 if __name__ == '__main__':
