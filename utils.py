@@ -70,12 +70,15 @@ class Plot:
         plt.savefig(self.res_dir + '/meta_params', bbox_inches='tight')
         plt.close()
 
-    def adapt_accuracy(self):
+    def adapt_accuracy(self, filename='/acc.txt', savename='/adapt_accuracy', idx_plot=None):
         """
             adaptation accuracy
         """
 
-        y = np.nan_to_num(np.loadtxt(self.res_dir + '/acc.txt'))
+        y = np.nan_to_num(np.loadtxt(self.res_dir + filename))
+
+        if idx_plot is not None:
+            self.adpt_idx = idx_plot
 
         for idx in self.adpt_idx:
             try:
@@ -87,15 +90,18 @@ class Plot:
         plt.legend(self.adpt_idx)
 
         plt.title('Adaptation loss')
-        plt.savefig(self.res_dir + '/adapt_accuracy', bbox_inches='tight')
+        plt.savefig(self.res_dir + savename, bbox_inches='tight')
         plt.close()
 
-    def adapt_loss(self):
+    def adapt_loss(self, filename='/loss.txt', savename='/adapt_loss', idx_plot=None):
         """
             adaptation loss
         """
 
-        y = np.nan_to_num(np.loadtxt(self.res_dir + '/loss.txt'))
+        y = np.nan_to_num(np.loadtxt(self.res_dir + filename))
+
+        if idx_plot is not None:
+            self.adpt_idx = idx_plot
 
         for idx in self.adpt_idx:
             try:
@@ -107,7 +113,7 @@ class Plot:
         plt.legend(self.adpt_idx)
 
         plt.title('Adaptation loss')
-        plt.savefig(self.res_dir + '/adapt_loss', bbox_inches='tight')
+        plt.savefig(self.res_dir + savename, bbox_inches='tight')
         plt.close()
 
     def meta_angles(self):
