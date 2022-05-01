@@ -406,8 +406,6 @@ def main():
     # -- load data
     if args.database == 'emnist':
         dataset = EmnistDataset(K=args.K, Q=args.Q)
-    elif args.database == 'omniglot':
-        dataset = OmniglotDataset(K=args.K, Q=args.Q, dim=args.dim)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
@@ -424,10 +422,6 @@ def main():
     metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
     metaplasticity_model.test(metatest_dataset, 'MNIST')
 
-    # -- meta test: Omniglot
-    # dataset = OmniglotDataset(K=args.K, Q=args.Q, dim=args.dim)
-    # metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
-    # metaplasticity_model.test(metatest_dataset)
 
 
 if __name__ == '__main__':
