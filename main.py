@@ -281,7 +281,7 @@ class MetaLearner:
         # -- plot
         self.plot()
 
-    def test(self, metatest_dataset):
+    def test(self, metatest_dataset, name):
         """
             Meta testing.
         """
@@ -311,8 +311,12 @@ class MetaLearner:
             loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
 
             # -- log
-            log(accuracy, self.res_dir + '/acc_test.txt')
-            log(loss, self.res_dir + '/loss_test.txt')
+            log(accuracy, self.res_dir + '/acc_test_' + name + '.txt')
+            log(loss, self.res_dir + '/loss_test_' + name + '.txt')
+
+        # -- plot
+        self.plot.adapt_accuracy(filename='/acc_test_' + name + '.txt', savename='/adapt_accuracy_' + name, idx_plot=[0, 1])
+        self.plot.adapt_loss(filename='/loss_test_' + name + '.txt', savename='/adapt_loss_' + name, idx_plot=[0, 1])
 
 
 def parse_args():
@@ -418,7 +422,7 @@ def main():
     # -- meta test: MNIST
     dataset = MNISTDataset(K=args.K, Q=args.Q)
     metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
-    metaplasticity_model.test(metatest_dataset)
+    metaplasticity_model.test(metatest_dataset, 'MNIST')
 
     # -- meta test: Omniglot
     # dataset = OmniglotDataset(K=args.K, Q=args.Q, dim=args.dim)
