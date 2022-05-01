@@ -190,12 +190,8 @@ class OmniglotDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]): 
-            if True:
-                if 'png' in img_:
-                    img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
-            else:
-                if 'pt' in img_:
-                    img.append(torch.load(self.char_path[idx] + '/' + img_))
+            if 'png' in img_:
+                img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(20), dtype=int)

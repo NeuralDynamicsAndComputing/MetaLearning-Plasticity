@@ -403,21 +403,17 @@ def check_args(args):
 def main():
     args = parse_args()
 
-    # -- load data
-    if args.database == 'emnist':
-        dataset = EmnistDataset(K=args.K, Q=args.Q)
-    sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
-    metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
-
-    # -- train model
     # print("Initial GPU Usage")
     # gpu_usage()
 
-    # -- meta train
+    # -- meta-train
+    dataset = EmnistDataset(K=args.K, Q=args.Q)
+    sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
+    metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
     metaplasticity_model = MetaLearner(metatrain_dataset, args)
     metaplasticity_model.train()
 
-    # -- meta test: MNIST
+    # -- meta-test: MNIST
     dataset = MNISTDataset(K=args.K, Q=args.Q)
     metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
     metaplasticity_model.test(metatest_dataset, 'MNIST')
