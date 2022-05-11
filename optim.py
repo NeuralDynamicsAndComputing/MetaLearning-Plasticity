@@ -10,8 +10,8 @@ def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
     # -- weight update
     i = 0
     for k, p in params.items():
-        if p.adapt and 'fc' in k:
-            if 'weight' in k:
+        if 'fc' in k:
+            if p.adapt and 'weight' in k:
                 p.update = - lr * torch.matmul(e[i + 1].T, activation[i])
 
                 if '1' in vec:
