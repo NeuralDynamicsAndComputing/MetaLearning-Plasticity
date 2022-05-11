@@ -260,8 +260,7 @@ class OmniglotDataset(Dataset):
 
 
 class DataProcess:
-    def __init__(self, M, K, Q, database, dim, device='cpu', iid=True):
-        self.M = M
+    def __init__(self, K, Q, database, dim, device='cpu', iid=True):
         self.K = K
         self.Q = Q
         self.database = database
@@ -270,17 +269,17 @@ class DataProcess:
         self.dim = dim
         self.dim_ = 784
 
-    def __call__(self, data):
+    def __call__(self, data, M):
 
         x_trn, y_trn, x_qry, y_qry = data
 
-        x_trn = torch.reshape(x_trn, (self.M * self.K, self.dim_)).to(self.device)
-        y_trn = torch.reshape(y_trn, (self.M * self.K, 1)).to(self.device)
-        x_qry = torch.reshape(x_qry, (self.M * self.Q, self.dim_)).to(self.device)
-        y_qry = torch.reshape(y_qry, (self.M * self.Q, 1)).to(self.device)
+        x_trn = torch.reshape(x_trn, (M * self.K, self.dim_)).to(self.device)
+        y_trn = torch.reshape(y_trn, (M * self.K, 1)).to(self.device)
+        x_qry = torch.reshape(x_qry, (M * self.Q, self.dim_)).to(self.device)
+        y_qry = torch.reshape(y_qry, (M * self.Q, 1)).to(self.device)
 
         if self.iid:
-            perm = np.random.choice(range(self.M * self.K), self.M * self.K, False)
+            perm = np.random.choice(range(M * self.K), M * self.K, False)
 
             x_trn = x_trn[perm]
             y_trn = y_trn[perm]

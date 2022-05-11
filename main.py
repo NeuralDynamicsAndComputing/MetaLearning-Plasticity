@@ -96,9 +96,10 @@ class MetaLearner:
 
         # -- data params
         self.K = args.K
+        self.M = args.M
         self.database = args.database
         self.metatrain_dataset = metatrain_dataset
-        self.data_process = DataProcess(M=args.M, K=self.K, Q=args.Q, database=self.database, dim=args.dim,
+        self.data_process = DataProcess(K=self.K, Q=args.Q, database=self.database, dim=args.dim,
                                         device=self.device)
 
         # -- model params
@@ -213,7 +214,7 @@ class MetaLearner:
             params = self.reinitialize()
 
             # -- training data
-            x_trn, y_trn, x_qry, y_qry = self.data_process(data)
+            x_trn, y_trn, x_qry, y_qry = self.data_process(data, self.M)
 
             """ adaptation """
             for itr_adapt, (x, label) in enumerate(zip(x_trn, y_trn)):
@@ -281,7 +282,7 @@ class MetaLearner:
         # -- plot
         self.plot()
 
-    def test(self, metatest_dataset, name):
+    def test(self, metatest_dataset, name, M):
         """
             Meta testing.
         """
@@ -293,7 +294,7 @@ class MetaLearner:
             params = self.reinitialize()
 
             # -- training data
-            x_trn, y_trn, x_qry, y_qry = self.data_process(data)
+            x_trn, y_trn, x_qry, y_qry = self.data_process(data, M)
 
             """ train """
             for itr_adapt, (x, label) in enumerate(zip(x_trn, y_trn)):
@@ -414,15 +415,21 @@ def main():
     metaplasticity_model.train()
 
     # -- meta-test: MNIST
+    M = 9
     dataset = MNISTDataset(K=args.K, Q=args.Q)
-    metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
-    metaplasticity_model.test(metatest_dataset, 'MNIST')
+    metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
+    metaplasticity_model.test(metatest_dataset, 'MNIST', M)
 
     # -- meta-test: FashionMNIST
+    M = 5
     dataset = FashionMNISTDataset(K=args.K, Q=args.Q)
-    metatest_dataset = DataLoader(dataset=dataset, batch_size=args.M, drop_last=True)
-    metaplasticity_model.test(metatest_dataset, 'FashionMNIST')
+    metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
+    metaplasticity_model.test(metatest_dataset, 'FashionMNIST_{}'.format(M), M)
 
+    M = 9
+    dataset = FashionMNISTDataset(K=args.K, Q=args.Q)
+    metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
+    metaplasticity_model.test(metatest_dataset, 'FashionMNIST_{}'.format(M), M)
 
 if __name__ == '__main__':
     main()
