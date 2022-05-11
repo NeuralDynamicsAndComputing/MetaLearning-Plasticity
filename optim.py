@@ -38,7 +38,7 @@ def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
 
     if fbk == 'sym':
         # -- feedback update (symmetric)
-        feedback_ = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})
+        feedback_ = dict({k: v for k, v in params.items() if 'fc' in k and 'weight' in k})  # fixme: a vector of k would suffice
         for i, ((k, B), (k_, _)) in enumerate(zip(feedback.items(), feedback_.items())):
             params[k].data = params[k_]
             params[k].adapt = B.adapt
