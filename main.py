@@ -290,6 +290,7 @@ class MetaLearner:
         """
         self.model.train()
 
+        idx_plot = []
         for eps, data in enumerate(metatest_dataset):
             # -- initialize
             loss, accuracy = [], []
@@ -317,9 +318,11 @@ class MetaLearner:
             log(accuracy, self.res_dir + '/acc_test_' + name + '.txt')
             log(loss, self.res_dir + '/loss_test_' + name + '.txt')
 
+            idx_plot.append(eps)
+
         # -- plot
-        self.plot.adapt_accuracy(filename='/acc_test_' + name + '.txt', savename='/adapt_accuracy_' + name, idx_plot=[0, 1])
-        self.plot.adapt_loss(filename='/loss_test_' + name + '.txt', savename='/adapt_loss_' + name, idx_plot=[0, 1])
+        self.plot.adapt_accuracy(filename='/acc_test_' + name + '.txt', savename='/adapt_accuracy_' + name, idx_plot=idx_plot)
+        self.plot.adapt_loss(filename='/loss_test_' + name + '.txt', savename='/adapt_loss_' + name, idx_plot=idx_plot)
 
 
 def parse_args():
