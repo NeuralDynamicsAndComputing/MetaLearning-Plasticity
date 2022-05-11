@@ -47,7 +47,7 @@ class MyModel(nn.Module):
         # -- learning params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.alpha_fwd = nn.Parameter(torch.log(torch.tensor(args.a).float()))
+        self.alpha_fwd = nn.Parameter(torch.tensor(args.a).float())
         self.beta_fwd = nn.Parameter(torch.log(torch.tensor(args.b).float()))
         self.tre_fwd = nn.Parameter(torch.tensor(args.c).float())
         self.fur_fwd = nn.Parameter(torch.tensor(args.d).float())
@@ -272,7 +272,7 @@ class MetaLearner:
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
             for idx, param in enumerate(Theta[:2]):
-                line += '\tMetaParam_{}: {:.6f}'.format(idx + 1, torch.exp(param).cpu().numpy())
+                line += '\tMetaParam_{}: {:.6f}'.format(idx + 1, param.cpu().numpy())
             for idx, param in enumerate(Theta[2:]):
                 line += '\tMetaParam_{}: {:.6f}'.format(idx + 1, param.cpu().numpy())
             print(line)
