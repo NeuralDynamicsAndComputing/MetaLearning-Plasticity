@@ -173,6 +173,8 @@ class MetaLearner:
             self.model.fk1.weight.data = self.model.fc1.weight.data
             self.model.fk2.weight.data = self.model.fc2.weight.data
             self.model.fk3.weight.data = self.model.fc3.weight.data
+            self.model.fk4.weight.data = self.model.fc4.weight.data
+            self.model.fk5.weight.data = self.model.fc5.weight.data
 
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items() if '.' in key}
         for key in params:
