@@ -75,7 +75,7 @@ class Plot:
             adaptation accuracy
         """
 
-        y = np.nan_to_num(np.loadtxt(self.res_dir + filename))
+        y = np.nan_to_num(np.loadtxt(self.res_dir + filename, ndmin=2))
 
         if idx_plot is not None:
             self.adpt_idx = idx_plot
@@ -97,8 +97,7 @@ class Plot:
         """
             adaptation loss
         """
-
-        y = np.nan_to_num(np.loadtxt(self.res_dir + filename))
+        y = np.nan_to_num(np.loadtxt(self.res_dir + filename, ndmin=2))
 
         if idx_plot is not None:
             self.adpt_idx = idx_plot
