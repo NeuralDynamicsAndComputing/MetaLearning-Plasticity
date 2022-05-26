@@ -124,12 +124,37 @@ class my_optimizer:
             for y, i in zip(reversed(activation), reversed(list(feedback_sym))):
                 e_sym_vec.insert(0, torch.matmul(e_sym_vec[0], feedback_sym[i]) * (1 - torch.exp(-Beta * y)))
 
+            # -- angle b/w modulator vectors e_FA and e_BP
             angle = []
             for e_fix, e_sym in zip(e, e_sym_vec):
                 angle.append(measure_angle(e_fix, e_sym))
 
+            # -- mean and sd for modulator vectors
+            e_mean, e_std, e_norm = [], [], []
+            for e_fix in e:
+                e_mean.append(e_fix.mean().item())
+                e_std.append(e_fix.std().item())
+                e_norm.append(torch.norm(e_fix))
+
+            # - angle b/w W and B and norm, mean, and SD for W
+            angle_WB, norm_W, W_mean, W_std = [], [], [], []
+            for i, i_sym in zip(feedback, feedback_sym):
+                a = torch.flatten(feedback[i])  # feedback[i][10]
+                b = torch.flatten(feedback_sym[i_sym])  # feedback_sym[i_sym][10]
+
+                angle_WB.append(measure_angle(a, b))
+                norm_W.append(torch.norm(feedback_sym[i_sym]))
+                W_std.append(feedback_sym[i_sym].std().item())
+                W_mean.append(feedback_sym[i_sym].mean().item())
+
+            # -- mean and SD for activations
+            y_mean, y_std, y_norm = [], [], []
+            for y in [*activation, F.softmax(logits, dim=1)]:
+                y_mean.append(y.mean().item())
+                y_std.append(y.std().item())
+                y_norm.append(torch.norm(y))
+
         # -- weight update
         self.update_rule([*activation, F.softmax(logits, dim=1)], e, params, feedback, Theta, self.vec, self.fbk)
 
-        return angle
-
+        return angle, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm

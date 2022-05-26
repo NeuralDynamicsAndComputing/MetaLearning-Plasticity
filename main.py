@@ -235,7 +235,8 @@ class MetaLearner:
                     quit()
 
                 # -- update network params
-                angle = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
+                angle, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm = \
+                    self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
                 angles.append(angle)
 
             """ meta update """
@@ -269,6 +270,16 @@ class MetaLearner:
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
             log(angle, self.res_dir + '/ang_meta.txt')
+            log(angle_WB, self.res_dir + '/ang_WB_meta.txt')
+            log(norm_W, self.res_dir + '/norm_W_meta.txt')
+            log(W_mean, self.res_dir + '/W_mean_meta.txt')
+            log(W_std, self.res_dir + '/W_std_meta.txt')
+            log(e_mean, self.res_dir + '/e_mean_meta.txt')
+            log(e_std, self.res_dir + '/e_std_meta.txt')
+            log(e_norm, self.res_dir + '/e_norm_meta.txt')
+            log(y_mean, self.res_dir + '/y_mean_meta.txt')
+            log(y_std, self.res_dir + '/y_std_meta.txt')
+            log(y_norm, self.res_dir + '/y_norm_meta.txt')
             log(angles, self.res_dir + '/ang.txt')
             log(meta_grad, self.res_dir + '/meta_grad.txt')
 
