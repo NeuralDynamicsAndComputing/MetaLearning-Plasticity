@@ -213,6 +213,7 @@ class MetaLearner:
 
             # -- initialize
             loss, accuracy, angles, meta_grad = [], [], [], []
+            W_norms = []
             params = self.reinitialize()
 
             # -- training data
@@ -238,6 +239,7 @@ class MetaLearner:
                 angle, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm = \
                     self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
                 angles.append(angle)
+                W_norms.append(norm_W)
 
             """ meta update """
             # -- predict
@@ -281,6 +283,7 @@ class MetaLearner:
             log(y_std, self.res_dir + '/y_std_meta.txt')
             log(y_norm, self.res_dir + '/y_norm_meta.txt')
             log(angles, self.res_dir + '/ang.txt')
+            log(W_norms, self.res_dir + '/norm_W.txt')
             log(meta_grad, self.res_dir + '/meta_grad.txt')
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
