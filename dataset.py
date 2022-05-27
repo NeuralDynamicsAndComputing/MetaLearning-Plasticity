@@ -63,8 +63,7 @@ class FashionMNISTDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
-            if 'png' in img_:
-                img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
+            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(1000), dtype=int)
@@ -90,12 +89,7 @@ class MNISTDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
-            if True:
-                if 'png' in img_:
-                    img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
-            else:
-                if 'pt' in img_:
-                    img.append(torch.load(self.char_path[idx] + '/' + img_))
+            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(890), dtype=int)
@@ -195,12 +189,7 @@ class EmnistDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
-            if True:
-                if 'png' in img_:
-                    img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
-            else:
-                if 'pt' in img_:
-                    img.append(torch.load(self.char_path[idx] + '/' + img_))
+            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(400), dtype=int)
@@ -250,8 +239,7 @@ class OmniglotDataset(Dataset):
 
         img = []
         for img_ in os.listdir(self.char_path[idx]): 
-            if 'png' in img_:
-                img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
+            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
         img = torch.cat(img)
         idx_vec = idx * torch.ones_like(torch.empty(20), dtype=int)
