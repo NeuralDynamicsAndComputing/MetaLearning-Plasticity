@@ -72,7 +72,7 @@ class FashionMNISTDataset(Dataset):
 
 
 class MNISTDataset(Dataset):
-    def __init__(self, K, Q=5):
+    def __init__(self, K, Q, dim):
 
         self.mnist_dir = './data/MNIST/'
 
@@ -80,7 +80,7 @@ class MNISTDataset(Dataset):
         self.Q = Q
 
         self.char_path = [folder for folder, folders, _ in os.walk(self.mnist_dir) if not folders]
-        self.transform = transforms.Compose([transforms.ToTensor()])
+        self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
 
     def __len__(self):
         return len(self.char_path)
@@ -98,7 +98,7 @@ class MNISTDataset(Dataset):
 
 
 class EmnistDataset(Dataset):
-    def __init__(self, K, Q=5):
+    def __init__(self, K, Q, dim):
         try:
             # -- create directory
             s_dir = os.getcwd()
@@ -141,7 +141,7 @@ class EmnistDataset(Dataset):
 
         # --
         self.char_path = [folder for folder, folders, _ in os.walk(self.emnist_dir) if not folders]
-        self.transform = transforms.Compose([transforms.ToTensor()])  # fixme
+        self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
 
     @staticmethod
     def download(url, filename):
@@ -198,7 +198,7 @@ class EmnistDataset(Dataset):
 
 
 class OmniglotDataset(Dataset):
-    def __init__(self, K, Q=5, dim=84):
+    def __init__(self, K, Q, dim):
         try:
             # -- create directory
             s_dir = os.getcwd()
@@ -255,15 +255,14 @@ class DataProcess:
         self.device = device
         self.iid = iid
         self.dim = dim
-        self.dim_ = 784
 
     def __call__(self, data, M):
 
         x_trn, y_trn, x_qry, y_qry = data
 
-        x_trn = torch.reshape(x_trn, (M * self.K, self.dim_)).to(self.device)
+        x_trn = torch.reshape(x_trn, (M * self.K, self.dim ** 2)).to(self.device)
         y_trn = torch.reshape(y_trn, (M * self.K, 1)).to(self.device)
-        x_qry = torch.reshape(x_qry, (M * self.Q, self.dim_)).to(self.device)
+        x_qry = torch.reshape(x_qry, (M * self.Q, self.dim ** 2)).to(self.device)
         y_qry = torch.reshape(y_qry, (M * self.Q, 1)).to(self.device)
 
         if self.iid:

@@ -424,7 +424,7 @@ def main():
     # gpu_usage()
 
     # -- meta-train
-    dataset = EmnistDataset(K=args.K, Q=args.Q)
+    dataset = EmnistDataset(K=args.K, Q=args.Q, dim=args.dim)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
     metaplasticity_model = MetaLearner(metatrain_dataset, args)
@@ -432,18 +432,18 @@ def main():
 
     # -- meta-test: MNIST
     M = 9
-    dataset = MNISTDataset(K=args.K, Q=args.Q)
+    dataset = MNISTDataset(K=args.K, Q=args.Q, dim=args.dim)
     metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
     metaplasticity_model.test(metatest_dataset, 'MNIST', M)
 
     # -- meta-test: FashionMNIST
     M = 5
-    dataset = FashionMNISTDataset(K=args.K, Q=args.Q)
+    dataset = FashionMNISTDataset(K=args.K, Q=args.Q, dim=args.dim)
     metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
     metaplasticity_model.test(metatest_dataset, 'FashionMNIST_{}'.format(M), M)
 
     M = 9
-    dataset = FashionMNISTDataset(K=args.K, Q=args.Q)
+    dataset = FashionMNISTDataset(K=args.K, Q=args.Q, dim=args.dim)
     metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
     metaplasticity_model.test(metatest_dataset, 'FashionMNIST_{}'.format(M), M)
 
