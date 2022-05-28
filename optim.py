@@ -115,7 +115,7 @@ class my_optimizer:
         feedback = dict({k: v for k, v in params.items() if 'fk' in k})
         e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - F.one_hot(label, num_classes=47)]
         for y, i in zip(reversed(activation), reversed(list(feedback))):
-            e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
+            e.insert(0, torch.matmul(e[-1], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
         # -- compute angles
         with torch.no_grad():
@@ -142,7 +142,7 @@ class my_optimizer:
                 a = torch.flatten(feedback[i])  # feedback[i][10]
                 b = torch.flatten(feedback_sym[i_sym])  # feedback_sym[i_sym][10]
 
-                angle_WB.append(measure_angle(a, b))
+                # angle_WB.append(measure_angle(a, b))
                 norm_W.append(torch.norm(feedback_sym[i_sym]))
                 W_std.append(feedback_sym[i_sym].std().item())
                 W_mean.append(feedback_sym[i_sym].mean().item())

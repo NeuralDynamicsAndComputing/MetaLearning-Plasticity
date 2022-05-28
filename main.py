@@ -38,10 +38,10 @@ class MyModel(nn.Module):
         self.fc5 = nn.Linear(70, dim_out, bias=False)
 
         # -- feedback
-        self.fk1 = nn.Linear(784, 170, bias=False)
-        self.fk2 = nn.Linear(170, 130, bias=False)
-        self.fk3 = nn.Linear(130, 100, bias=False)
-        self.fk4 = nn.Linear(100, 70, bias=False)
+        self.fk1 = nn.Linear(784, dim_out, bias=False)
+        self.fk2 = nn.Linear(170, dim_out, bias=False)
+        self.fk3 = nn.Linear(130, dim_out, bias=False)
+        self.fk4 = nn.Linear(100, dim_out, bias=False)
         self.fk5 = nn.Linear(70, dim_out, bias=False)
 
         # -- learning params
