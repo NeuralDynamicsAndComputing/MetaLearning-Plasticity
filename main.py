@@ -111,7 +111,7 @@ class MetaLearner:
 
         # -- optimization params
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(generic_rule, args.vec, args.fbk)
+        self.OptimAdpt = my_optimizer(generic_rule, args.vec, args.fbk, args.err_prop)
         self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
                                      {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
 
