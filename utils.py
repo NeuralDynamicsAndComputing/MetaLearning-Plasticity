@@ -4,7 +4,7 @@ import torch
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from sklearn.decomposition import PCA
 
 class Plot:
     def __init__(self, res_dir, adpt_idx=[0, 10, 400, 1000, 1100, 1200, 2900, 4900]):
@@ -28,7 +28,7 @@ class Plot:
         """
             meta parameters
         """
-        # fixme: read 'vec' and use for plotting and legend
+        # todo: read 'vec' and use for plotting and legend
         # -- read meta params
         with open(self.res_dir + '/params.txt', 'r') as f:
             strings = re.findall(r'(-?\d+\.\d+|nan)', f.read())
@@ -174,3 +174,18 @@ def measure_angle(v1, v2):
     n2 = normalize_vec(v2.squeeze())
 
     return np.nan_to_num((torch.acos(torch.einsum('i, i -> ', n1, n2)) * 180 / torch.pi).cpu().numpy())
+
+def PCA_vis(activations, y_label, eps, res_dir):
+    pca = PCA(n_components=2)
+    cmap = plt.get_cmap("tab10")
+    _, label = torch.unique(y_label, return_inverse=True)
+    label = label.cpu().detach().numpy().ravel()
+
+    for l, y in enumerate(activations):
+        pca.fit(y.cpu().detach().numpy())
+        embedding = pca.transform(y.cpu().detach().numpy())
+
+        plt.scatter(embedding[:, 0], embedding[:, 1], s=5, c=cmap(label))
+        plt.title('Projected activations for layer {}'.format(l))
+        plt.savefig(res_dir + '/embedding_eps{}_l{}'.format(eps, l), bbox_inches='tight')
+        plt.close()
