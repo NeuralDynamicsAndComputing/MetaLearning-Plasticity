@@ -28,7 +28,7 @@ class Plot:
         """
             meta parameters
         """
-        # fixme: read 'vec' and use for plotting and legend
+        # todo: read 'vec' and use for plotting and legend
         # -- read meta params
         with open(self.res_dir + '/params.txt', 'r') as f:
             strings = re.findall(r'(-?\d+\.\d+|nan)', f.read())
