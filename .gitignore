@@ -9,3 +9,4 @@ model_torchviz
 *.o*
 gpu_test.py
 test.py
+plots.py
