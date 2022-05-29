@@ -37,12 +37,13 @@ class MyModel(nn.Module):
         self.fc4 = nn.Linear(100, 70, bias=False)
         self.fc5 = nn.Linear(70, dim_out, bias=False)
 
-        # -- feedback
-        self.fk1 = nn.Linear(784, dim_out, bias=False)
-        self.fk2 = nn.Linear(170, dim_out, bias=False)
-        self.fk3 = nn.Linear(130, dim_out, bias=False)
-        self.fk4 = nn.Linear(100, dim_out, bias=False)
-        self.fk5 = nn.Linear(70, dim_out, bias=False)
+        if args.err_prop is 'DFA':
+            # -- feedback
+            self.fk1 = nn.Linear(784, dim_out, bias=False)
+            self.fk2 = nn.Linear(170, dim_out, bias=False)
+            self.fk3 = nn.Linear(130, dim_out, bias=False)
+            self.fk4 = nn.Linear(100, dim_out, bias=False)
+            self.fk5 = nn.Linear(70, dim_out, bias=False)
 
         # -- learning params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
@@ -390,6 +391,8 @@ def parse_args():
     parser.add_argument('--vec', nargs='*', default=[], help='Learning rule terms.')
     parser.add_argument('--fbk', type=str, default='sym',
                         help='Feedback matrix type: 1) sym = Symmetric matrix; 2) fix = Fixed random matrix.')
+    parser.add_argument('--err_prop', type=str, default='FA',
+                        help='Error propagation type: 1) FA = Feedback Alignment; 2) DFA = Direct FA.')
 
     args = parser.parse_args()
 
