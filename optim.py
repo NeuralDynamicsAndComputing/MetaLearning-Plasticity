@@ -116,7 +116,9 @@ class my_optimizer:
         feedback = dict({k: v for k, v in params.items() if 'fk' in k})
         e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - F.one_hot(label, num_classes=47)]
 
-        if self.err_prop is 'DFA':
+        if self.err_prop is 'FA':
+            idx_e = 0
+        elif self.err_prop is 'DFA':
             idx_e = -1
 
         for y, i in zip(reversed(activation), reversed(list(feedback))):
@@ -144,11 +146,12 @@ class my_optimizer:
             # - angle b/w W and B and norm, mean, and SD for W
             angle_WB, norm_W, W_mean, W_std = [], [], [], []
             for i, i_sym in zip(feedback, feedback_sym):
-                a = torch.flatten(feedback[i])  # feedback[i][10]
-                b = torch.flatten(feedback_sym[i_sym])  # feedback_sym[i_sym][10]
 
                 if self.err_prop is 'FA':
+                    a = torch.flatten(feedback[i])  # feedback[i][10]
+                    b = torch.flatten(feedback_sym[i_sym])  # feedback_sym[i_sym][10]
                     angle_WB.append(measure_angle(a, b))
+
                 norm_W.append(torch.norm(feedback_sym[i_sym]))
                 W_std.append(feedback_sym[i_sym].std().item())
                 W_mean.append(feedback_sym[i_sym].mean().item())

@@ -37,8 +37,14 @@ class MyModel(nn.Module):
         self.fc4 = nn.Linear(100, 70, bias=False)
         self.fc5 = nn.Linear(70, dim_out, bias=False)
 
-        if args.err_prop is 'DFA':
-            # -- feedback
+        # -- feedback
+        if args.err_prop is 'FA':
+            self.fk1 = nn.Linear(784, 170, bias=False)
+            self.fk2 = nn.Linear(170, 130, bias=False)
+            self.fk3 = nn.Linear(130, 100, bias=False)
+            self.fk4 = nn.Linear(100, 70, bias=False)
+            self.fk5 = nn.Linear(70, dim_out, bias=False)
+        elif args.err_prop is 'DFA':
             self.fk1 = nn.Linear(784, dim_out, bias=False)
             self.fk2 = nn.Linear(170, dim_out, bias=False)
             self.fk3 = nn.Linear(130, dim_out, bias=False)
