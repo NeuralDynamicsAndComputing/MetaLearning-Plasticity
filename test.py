@@ -1,29 +1,17 @@
-import os
 import torch
 import warnings
-import argparse
-import datetime
-
 import numpy as np
 
-from git import Repo
 from torch import nn, optim
-from random import randrange
-from torchviz import make_dot
 from torch.nn.utils import _stateless
 from sklearn.decomposition import PCA
-from torch.nn import functional as func
-# from GPUtil import showUtilization as gpu_usage
-from torch.utils.data import DataLoader, RandomSampler
+
 import matplotlib.pyplot as plt
-from utils import log, Plot
-from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
-from optim import my_optimizer, evolve_rule, generic_rule
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-np.random.seed(6)
-torch.manual_seed(6)
+np.random.seed(0)
+torch.manual_seed(0)
 
 
 class MyModel(nn.Module):
@@ -56,16 +44,28 @@ class MyModel(nn.Module):
         return (y0, y1, y2), self.fc3(y2)
 
 
-model = MyModel()
-weight = 'fc1.weight'
-plasticity_rule = 'SYM'  # FIX, FIX_12, FIX_16, SYM
+def w2vec(param_dir):
 
-if weight == 'fc1.weight':
-    W_d1, W_d2 = 130, 784
-elif weight == 'fc2.weight':
-    W_d1, W_d2 = 70, 130
-elif weight == 'fc3.weight':
-    W_d1, W_d2 = 47, 70
+    params = torch.load(param_dir)
+
+    W_1 = params['fc1.weight'].reshape(1, -1)
+    W_2 = params['fc2.weight'].reshape(1, -1)
+    W_3 = params['fc3.weight'].reshape(1, -1)
+
+    return torch.cat((W_1, W_2, W_3), dim=1)
+
+def vec2w(theta):
+
+    params = {}
+
+    params['fc1.weight'] = theta[:, :(130 * 784)].reshape(130, 784)
+    params['fc2.weight'] = theta[:, (130 * 784):(130 * 784 + 70 * 130)].reshape(70, 130)
+    params['fc3.weight'] = theta[:, (130 * 784 + 70 * 130):].reshape(47, 70)
+
+    return params
+
+model = MyModel()
+plasticity_rule = 'SYM'  # FIX, FIX_12, FIX_16, SYM
 
 if plasticity_rule == 'FIX':
     res_dir = './results/trunk/Tests_May_32/Tests/FIX/2022-06-01_16-44-49_26/'
@@ -77,9 +77,9 @@ if plasticity_rule == 'SYM':
     res_dir = './results/trunk/Tests_May_32/Tests/SYM/2022-06-01_16-44-28_11/'
 
 eps = 100
+n = 248
 loss_func = nn.CrossEntropyLoss()
-params = torch.load(res_dir + 'param_eps{}_itr249.pt'.format(eps))
-W_n = params[weight].reshape(1, -1)
+theta_n = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, n))
 
 # -- load data
 x_trn = torch.load(res_dir + 'eps{}_x_trn.pt'.format(eps))
@@ -88,13 +88,13 @@ x_qry = torch.load(res_dir + 'eps{}_x_qry.pt'.format(eps))
 y_qry = torch.load(res_dir + 'eps{}_y_qry.pt'.format(eps))
 
 # -- construct matrix M
-for itr_adapt in range(249):
-    W = torch.load(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))[weight].reshape(1, -1) - W_n
+for i in range(n):
+    theta_i = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, i)) - theta_n
 
     try:
-        M = torch.cat((M, W))
+        M = torch.cat((M, theta_i))
     except:
-        M = W.clone()
+        M = theta_i.clone()
 
 # -- find directions
 pca = PCA(n_components=2)
@@ -102,37 +102,41 @@ pca.fit(M.cpu().detach().numpy())
 delta = pca.components_
 
 # -- construct grid
-plt.figure(0)
 fig, (ax1, ax2) = plt.subplots(ncols=2)
 
-n = 40
-x_min, x_max, y_min, y_max = -5, 0, -1, 1
-alph, beta = torch.meshgrid([torch.linspace(x_min, x_max, steps=n), torch.linspace(y_min, y_max, steps=n)])
+n_x, n_y = 51, 51
+x_min, x_max, y_min, y_max = -2, 9, -2.5, 0.75
+alph, beta = torch.meshgrid([torch.linspace(x_min, x_max, steps=n_x), torch.linspace(y_min, y_max, steps=n_y)])
 loss = []
-for i in range(len(alph)):
-    for j in range(len(beta)):
-
-        W3_grid = (W_n + alph[i, j] * delta[0] + beta[i, j] * delta[1]).reshape(W_d1, W_d2)
-        params[weight].data = W3_grid.data
-
-        # -- compute loss
-        _, logits = _stateless.functional_call(model, params, x_qry.unsqueeze(1))
-        loss.append(loss_func(logits, y_qry.reshape(-1)).item())
 
 X = alph.numpy()
 Y = beta.numpy()
-Z = np.array(loss).reshape(n, n)
+Z = np.zeros_like(X)
+
+for i in range(len(alph)):
+    for j in range(len(beta)):
+
+        params = vec2w(theta_n + alph[i, j] * delta[0] + beta[i, j] * delta[1])
+
+        # -- compute loss
+        _, logits = _stateless.functional_call(model, params, x_trn.unsqueeze(1))
+        Z[i, j] = loss_func(logits, y_trn.reshape(-1)).item()
+
 ax1.pcolor(X, Y, Z)
 
-cs = ax2.tricontour(X.ravel(), Y.ravel(), Z.ravel(), levels=14, linewidths=0.5)
+cs = ax2.tricontour(X.ravel(), Y.ravel(), Z.ravel(), levels=20, linewidths=0.5)
 ax2.clabel(cs)
-ax2.tricontourf(X.ravel(), Y.ravel(), Z.ravel(), levels=14, alpha=0.3)
+ax2.tricontourf(X.ravel(), Y.ravel(), Z.ravel(), levels=20, alpha=0.3)
 
 # -- vis trajectory
-for itr_adapt in range(249):
-    params = torch.load(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))[weight].reshape(1, -1)
+for itr_adapt in range(n+1):
+    params = torch.load(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
+    _, logits = _stateless.functional_call(model, params, x_trn.unsqueeze(1))
+    print(loss_func(logits, y_trn.reshape(-1)).item())
 
-    traj = pca.transform(params.cpu().detach().numpy())
+    theta = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
+
+    traj = np.matmul((theta-theta_n).cpu().detach().numpy(), delta.T)
 
     ax1.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
     ax2.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
@@ -141,5 +145,5 @@ ax1.scatter(traj[0, 0], traj[0, 1], s=40, c='r', marker='x')
 ax2.scatter(traj[0, 0], traj[0, 1], s=40, c='r', marker='x')
 
 # -- plot
-plt.title('Loss landscape for {} with {}'.format(weight, plasticity_rule))
+plt.suptitle('Loss landscape for {}'.format(plasticity_rule))
 plt.show()
