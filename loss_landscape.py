@@ -65,19 +65,28 @@ def vec2w(theta):
     return params
 
 model = MyModel()
-plasticity_rule = 'SYM'  # FIX, FIX_12, FIX_16, SYM
-
+plasticity_rule = 'FIX'  # FIX, FIX_12, FIX_16, SYM
+print(plasticity_rule)
 if plasticity_rule == 'FIX':
-    res_dir = './results/trunk/Tests_May_32/Tests/FIX/2022-06-01_16-44-49_26/'
+    x_min, x_max, y_min, y_max = -2, 5.5, -2, 3.5
+    # res_dir = './results/trunk/Tests_May_32/Tests/FIX/2022-06-01_16-44-49_26/'
+    res_dir = './results/trunk/Tests_June_5/Tests/fix/2022-06-05_12-39-46_/'
 if plasticity_rule == 'FIX_12':
-    res_dir = './results/trunk/Tests_May_32/Tests/FIX_12/2022-06-01_16-44-58_11/'
+    # x_min, x_max, y_min, y_max = -3, 9, -6.5, 2.5
+    x_min, x_max, y_min, y_max = -1.5, 6.5, -3.5, 2.5
+    # res_dir = './results/trunk/Tests_May_32/Tests/FIX_12/2022-06-01_16-44-58_11/'
+    res_dir = './results/trunk/Tests_June_5/Tests/fix_12/2022-06-05_12-34-39_/'
 if plasticity_rule == 'FIX_16':
-    res_dir = './results/trunk/Tests_May_32/Tests/FIX_16/2022-06-01_16-45-08_28/'
+    x_min, x_max, y_min, y_max = -2, 5.5, -2, 3.5
+    # res_dir = './results/trunk/Tests_May_32/Tests/FIX_16/2022-06-01_16-45-08_28/'
+    res_dir = './results/trunk/Tests_June_5/Tests/fix_16/2022-06-05_12-39-43_/'
 if plasticity_rule == 'SYM':
-    res_dir = './results/trunk/Tests_May_32/Tests/SYM/2022-06-01_16-44-28_11/'
+    x_min, x_max, y_min, y_max = -2, 5.5, -2, 3.5
+    # res_dir = './results/trunk/Tests_May_32/Tests/SYM/2022-06-01_16-44-28_11/'
+    res_dir = './results/trunk/Tests_June_5/Tests/sym/2022-06-05_12-39-53_/'
 
 eps = 100
-n = 248
+n = 19  # 248
 loss_func = nn.CrossEntropyLoss()
 theta_n = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, n))
 
@@ -102,10 +111,10 @@ pca.fit(M.cpu().detach().numpy())
 delta = pca.components_
 
 # -- construct grid
-fig, (ax1, ax2) = plt.subplots(ncols=2)
+# fig, (ax1, ax2) = plt.subplots(ncols=2)
+fig, (ax2) = plt.subplots(ncols=1)
 
 n_x, n_y = 51, 51
-x_min, x_max, y_min, y_max = -2, 9, -2.5, 0.75
 alph, beta = torch.meshgrid([torch.linspace(x_min, x_max, steps=n_x), torch.linspace(y_min, y_max, steps=n_y)])
 loss = []
 
@@ -122,28 +131,37 @@ for i in range(len(alph)):
         _, logits = _stateless.functional_call(model, params, x_trn.unsqueeze(1))
         Z[i, j] = loss_func(logits, y_trn.reshape(-1)).item()
 
-ax1.pcolor(X, Y, Z)
+# ax1.pcolor(X, Y, Z)
+# levels = np.linspace(0, 4, 40)
+levels = np.linspace(0, 10, 15) ** 2 / 100 * 4
 
-cs = ax2.tricontour(X.ravel(), Y.ravel(), Z.ravel(), levels=20, linewidths=0.5)
+cs = ax2.contour(X, Y, Z, levels=levels, linewidths=0.5)
 ax2.clabel(cs)
-ax2.tricontourf(X.ravel(), Y.ravel(), Z.ravel(), levels=20, alpha=0.3)
+ax2.contourf(X, Y, Z, levels=levels, alpha=0.3)
 
 # -- vis trajectory
 for itr_adapt in range(n+1):
     params = torch.load(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
     _, logits = _stateless.functional_call(model, params, x_trn.unsqueeze(1))
-    print(loss_func(logits, y_trn.reshape(-1)).item())
 
     theta = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
 
+    # traj = np.matmul(theta.cpu().detach().numpy(), delta.T) - np.matmul(theta_n.cpu().detach().numpy(), delta.T)
     traj = np.matmul((theta-theta_n).cpu().detach().numpy(), delta.T)
 
-    ax1.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
-    ax2.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
+    if itr_adapt % 10 == 0:
+        print(loss_func(logits, y_trn.reshape(-1)).item())
 
-ax1.scatter(traj[0, 0], traj[0, 1], s=40, c='r', marker='x')
+        # ax1.scatter(traj[0, 0], traj[0, 1], s=2, c='b')
+        ax2.scatter(traj[0, 0], traj[0, 1], s=2, c='b')
+    else:
+        # ax1.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
+        ax2.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
+
+# ax1.scatter(traj[0, 0], traj[0, 1], s=40, c='r', marker='x')
 ax2.scatter(traj[0, 0], traj[0, 1], s=40, c='r', marker='x')
 
 # -- plot
 plt.suptitle('Loss landscape for {}'.format(plasticity_rule))
+plt.axis('equal')
 plt.show()
