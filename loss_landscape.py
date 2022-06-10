@@ -49,34 +49,29 @@ class MyModel(nn.Module):
 
         return (y0, y1, y2, y3, y4), self.fc5(y4)
 
+    @staticmethod
+    def w2vec(param_dir):
+        params = torch.load(param_dir)
 
-def w2vec(param_dir):
+        W = []
+        for k in [k for k in params if 'fc' in k]:
+            W.append(params[k].ravel())
 
-    params = torch.load(param_dir)
+        return torch.cat(W).unsqueeze(0)
 
-    W_1 = params['fc1.weight'].reshape(1, -1)
-    W_2 = params['fc2.weight'].reshape(1, -1)
-    W_3 = params['fc3.weight'].reshape(1, -1)
-    W_4 = params['fc4.weight'].reshape(1, -1)
-    W_5 = params['fc5.weight'].reshape(1, -1)
+    def vec2w(self, theta):
+        params = {}
 
-    return torch.cat((W_1, W_2, W_3, W_4, W_5), dim=1)
+        params['fc1.weight'] = theta[:, :(170 * 784)].reshape(170, 784)
+        params['fc2.weight'] = theta[:, (170 * 784):
+                                        (170 * 784 + 130 * 170)].reshape(130, 170)
+        params['fc3.weight'] = theta[:, (170 * 784 + 130 * 170):
+                                        (170 * 784 + 130 * 170 + 100 * 130)].reshape(100, 130)
+        params['fc4.weight'] = theta[:, (170 * 784 + 130 * 170 + 100 * 130):
+                                        (170 * 784 + 130 * 170 + 100 * 130 + 70 * 100)].reshape(70, 100)
+        params['fc5.weight'] = theta[:, (170 * 784 + 130 * 170 + 100 * 130 + 70 * 100):].reshape(47, 70)
 
-
-def vec2w(theta):
-
-    params = {}
-
-    params['fc1.weight'] = theta[:, :(170 * 784)].reshape(170, 784)
-    params['fc2.weight'] = theta[:, (170 * 784):
-                                    (170 * 784 + 130 * 170)].reshape(130, 170)
-    params['fc3.weight'] = theta[:, (170 * 784 + 130 * 170):
-                                    (170 * 784 + 130 * 170 + 100 * 130)].reshape(100, 130)
-    params['fc4.weight'] = theta[:, (170 * 784 + 130 * 170 + 100 * 130):
-                                    (170 * 784 + 130 * 170 + 100 * 130 + 70 * 100)].reshape(70, 100)
-    params['fc5.weight'] = theta[:, (170 * 784 + 130 * 170 + 100 * 130 + 70 * 100):].reshape(47, 70)
-
-    return params
+        return params
 
 
 # -- initialization
@@ -102,12 +97,12 @@ if plasticity_rule == 'SYM':
     res_dir = './results/trunk/Tests_June_5/Tests/sym/2022-06-05_18-31-55_/'
 
 eps = 100
-epochs = 1
+epochs = 2
 step = 5
 step_level = 30
 n = 150 * epochs - 1
 loss_func = nn.CrossEntropyLoss()
-theta_n = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, n))
+theta_n = model.w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, n))
 
 # -- load data
 x_trn = torch.load(res_dir + 'eps{}_x_trn.pt'.format(eps))
@@ -117,7 +112,7 @@ y_qry = torch.load(res_dir + 'eps{}_y_qry.pt'.format(eps))
 
 # -- construct matrix M
 for i in range(0, n, step):
-    theta_i = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, i)) - theta_n
+    theta_i = model.w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, i)) - theta_n
 
     try:
         M = torch.cat((M, theta_i))
@@ -144,7 +139,7 @@ Z = np.zeros_like(X)
 for i in range(len(alph)):
     for j in range(len(beta)):
         # -- model params at grid points
-        params = vec2w(theta_n + alph[i, j] * delta[0] + beta[i, j] * delta[1])
+        params = model.vec2w(theta_n + alph[i, j] * delta[0] + beta[i, j] * delta[1])
 
         # -- compute loss
         _, logits = _stateless.functional_call(model, params, x_trn.unsqueeze(1))
@@ -163,7 +158,7 @@ for itr_adapt in range(0, n, step):
     params = torch.load(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
     _, logits = _stateless.functional_call(model, params, x_trn.unsqueeze(1))
 
-    theta = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
+    theta = model.w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
 
     # traj = np.matmul(theta.cpu().detach().numpy(), delta.T) - np.matmul(theta_n.cpu().detach().numpy(), delta.T)
     traj = np.matmul((theta-theta_n).cpu().detach().numpy(), delta.T)
