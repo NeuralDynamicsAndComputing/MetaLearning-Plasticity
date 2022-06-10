@@ -20,14 +20,18 @@ class MyModel(nn.Module):
 
         # -- prediction params
         dim_out = 47
-        self.fc1 = nn.Linear(784, 130, bias=False)
-        self.fc2 = nn.Linear(130, 70, bias=False)
-        self.fc3 = nn.Linear(70, dim_out, bias=False)
+        self.fc1 = nn.Linear(784, 170, bias=False)
+        self.fc2 = nn.Linear(170, 130, bias=False)
+        self.fc3 = nn.Linear(130, 100, bias=False)
+        self.fc4 = nn.Linear(100, 70, bias=False)
+        self.fc5 = nn.Linear(70, dim_out, bias=False)
 
         # -- feedback
-        self.fk1 = nn.Linear(784, 130, bias=False)
-        self.fk2 = nn.Linear(130, 70, bias=False)
-        self.fk3 = nn.Linear(70, dim_out, bias=False)
+        self.fk1 = nn.Linear(784, 170, bias=False)
+        self.fk2 = nn.Linear(170, 130, bias=False)
+        self.fk3 = nn.Linear(130, 100, bias=False)
+        self.fk4 = nn.Linear(100, 70, bias=False)
+        self.fk5 = nn.Linear(70, dim_out, bias=False)
 
         # -- non-linearity
         self.relu = nn.ReLU()
@@ -40,8 +44,10 @@ class MyModel(nn.Module):
 
         y1 = self.sopl(self.fc1(y0))
         y2 = self.sopl(self.fc2(y1))
+        y3 = self.sopl(self.fc3(y2))
+        y4 = self.sopl(self.fc4(y3))
 
-        return (y0, y1, y2), self.fc3(y2)
+        return (y0, y1, y2, y3, y4), self.fc5(y4)
 
 
 def w2vec(param_dir):
@@ -51,16 +57,24 @@ def w2vec(param_dir):
     W_1 = params['fc1.weight'].reshape(1, -1)
     W_2 = params['fc2.weight'].reshape(1, -1)
     W_3 = params['fc3.weight'].reshape(1, -1)
+    W_4 = params['fc4.weight'].reshape(1, -1)
+    W_5 = params['fc5.weight'].reshape(1, -1)
 
-    return torch.cat((W_1, W_2, W_3), dim=1)
+    return torch.cat((W_1, W_2, W_3, W_4, W_5), dim=1)
+
 
 def vec2w(theta):
 
     params = {}
 
-    params['fc1.weight'] = theta[:, :(130 * 784)].reshape(130, 784)
-    params['fc2.weight'] = theta[:, (130 * 784):(130 * 784 + 70 * 130)].reshape(70, 130)
-    params['fc3.weight'] = theta[:, (130 * 784 + 70 * 130):].reshape(47, 70)
+    params['fc1.weight'] = theta[:, :(170 * 784)].reshape(170, 784)
+    params['fc2.weight'] = theta[:, (170 * 784):
+                                    (170 * 784 + 130 * 170)].reshape(130, 170)
+    params['fc3.weight'] = theta[:, (170 * 784 + 130 * 170):
+                                    (170 * 784 + 130 * 170 + 100 * 130)].reshape(100, 130)
+    params['fc4.weight'] = theta[:, (170 * 784 + 130 * 170 + 100 * 130):
+                                    (170 * 784 + 130 * 170 + 100 * 130 + 70 * 100)].reshape(70, 100)
+    params['fc5.weight'] = theta[:, (170 * 784 + 130 * 170 + 100 * 130 + 70 * 100):].reshape(47, 70)
 
     return params
 
