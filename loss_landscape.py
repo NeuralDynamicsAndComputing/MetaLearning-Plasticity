@@ -78,29 +78,34 @@ def vec2w(theta):
 
     return params
 
+
+# -- initialization
 model = MyModel()
 plasticity_rule = 'FIX'  # FIX, FIX_12, FIX_16, SYM
 print(plasticity_rule)
 if plasticity_rule == 'FIX':
-    x_min, x_max, y_min, y_max = -2, 5.5, -2, 3.5
+    x_min, x_max, y_min, y_max = -0.25, 3.0, -1.5, 0.5
     # res_dir = './results/trunk/Tests_May_32/Tests/FIX/2022-06-01_16-44-49_26/'
-    res_dir = './results/trunk/Tests_June_5/Tests/fix/2022-06-05_12-39-46_/'
+    res_dir = './results/trunk/Tests_June_5/Tests/fix/2022-06-05_18-31-26_/'
 if plasticity_rule == 'FIX_12':
     # x_min, x_max, y_min, y_max = -3, 9, -6.5, 2.5
-    x_min, x_max, y_min, y_max = -1.5, 6.5, -3.5, 2.5
+    x_min, x_max, y_min, y_max = -0.5, 7.5, -3, 2
     # res_dir = './results/trunk/Tests_May_32/Tests/FIX_12/2022-06-01_16-44-58_11/'
-    res_dir = './results/trunk/Tests_June_5/Tests/fix_12/2022-06-05_12-34-39_/'
+    res_dir = './results/trunk/Tests_June_5/Tests/fix_12/2022-06-05_18-29-47_/'
 if plasticity_rule == 'FIX_16':
-    x_min, x_max, y_min, y_max = -2, 5.5, -2, 3.5
+    x_min, x_max, y_min, y_max = -0.5, 6.5, -3, 2.5
     # res_dir = './results/trunk/Tests_May_32/Tests/FIX_16/2022-06-01_16-45-08_28/'
-    res_dir = './results/trunk/Tests_June_5/Tests/fix_16/2022-06-05_12-39-43_/'
+    res_dir = './results/trunk/Tests_June_5/Tests/fix_16/2022-06-05_18-30-22_/'
 if plasticity_rule == 'SYM':
-    x_min, x_max, y_min, y_max = -2, 5.5, -2, 3.5
+    x_min, x_max, y_min, y_max = -0.5, 4, -2, 1.5
     # res_dir = './results/trunk/Tests_May_32/Tests/SYM/2022-06-01_16-44-28_11/'
-    res_dir = './results/trunk/Tests_June_5/Tests/sym/2022-06-05_12-39-53_/'
+    res_dir = './results/trunk/Tests_June_5/Tests/sym/2022-06-05_18-31-55_/'
 
 eps = 100
-n = 19  # 248
+epochs = 1
+step = 5
+step_level = 30
+n = 150 * epochs - 1
 loss_func = nn.CrossEntropyLoss()
 theta_n = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, n))
 
@@ -111,7 +116,7 @@ x_qry = torch.load(res_dir + 'eps{}_x_qry.pt'.format(eps))
 y_qry = torch.load(res_dir + 'eps{}_y_qry.pt'.format(eps))
 
 # -- construct matrix M
-for i in range(n):
+for i in range(0, n, step):
     theta_i = w2vec(res_dir + 'param_eps{}_itr{}.pt'.format(eps, i)) - theta_n
 
     try:
@@ -138,7 +143,7 @@ Z = np.zeros_like(X)
 
 for i in range(len(alph)):
     for j in range(len(beta)):
-
+        # -- model params at grid points
         params = vec2w(theta_n + alph[i, j] * delta[0] + beta[i, j] * delta[1])
 
         # -- compute loss
@@ -146,15 +151,15 @@ for i in range(len(alph)):
         Z[i, j] = loss_func(logits, y_trn.reshape(-1)).item()
 
 # ax1.pcolor(X, Y, Z)
-# levels = np.linspace(0, 4, 40)
-levels = np.linspace(0, 10, 15) ** 2 / 100 * 4
+levels = np.linspace(0, 4, step_level)
 
 cs = ax2.contour(X, Y, Z, levels=levels, linewidths=0.5)
 ax2.clabel(cs)
 ax2.contourf(X, Y, Z, levels=levels, alpha=0.3)
 
 # -- vis trajectory
-for itr_adapt in range(n+1):
+traj_ = []
+for itr_adapt in range(0, n, step):
     params = torch.load(res_dir + 'param_eps{}_itr{}.pt'.format(eps, itr_adapt))
     _, logits = _stateless.functional_call(model, params, x_trn.unsqueeze(1))
 
@@ -162,9 +167,8 @@ for itr_adapt in range(n+1):
 
     # traj = np.matmul(theta.cpu().detach().numpy(), delta.T) - np.matmul(theta_n.cpu().detach().numpy(), delta.T)
     traj = np.matmul((theta-theta_n).cpu().detach().numpy(), delta.T)
-
-    if itr_adapt % 10 == 0:
-        print(loss_func(logits, y_trn.reshape(-1)).item())
+    traj_.append(traj)
+    if itr_adapt % (150/step) == 0:
 
         # ax1.scatter(traj[0, 0], traj[0, 1], s=2, c='b')
         ax2.scatter(traj[0, 0], traj[0, 1], s=2, c='b')
@@ -172,10 +176,13 @@ for itr_adapt in range(n+1):
         # ax1.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
         ax2.scatter(traj[0, 0], traj[0, 1], s=2, c='r')
 
+traj_ = np.concatenate(traj_).T  # todo: remove if statement above and use this vec to scatter plot
 # ax1.scatter(traj[0, 0], traj[0, 1], s=40, c='r', marker='x')
 ax2.scatter(traj[0, 0], traj[0, 1], s=40, c='r', marker='x')
 
 # -- plot
 plt.suptitle('Loss landscape for {}'.format(plasticity_rule))
 plt.axis('equal')
+plt.savefig(res_dir + '/landscape_{}_epoch{}_zoom'.format(plasticity_rule, epochs), bbox_inches='tight')
 plt.show()
+plt.close()
