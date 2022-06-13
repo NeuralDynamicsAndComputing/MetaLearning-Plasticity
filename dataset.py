@@ -248,10 +248,9 @@ class OmniglotDataset(Dataset):
 
 
 class DataProcess:
-    def __init__(self, K, Q, database, dim, device='cpu', iid=True):
+    def __init__(self, K, Q, dim, device='cpu', iid=True):
         self.K = K
         self.Q = Q
-        self.database = database
         self.device = device
         self.iid = iid
         self.dim = dim

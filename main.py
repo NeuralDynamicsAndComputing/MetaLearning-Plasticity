@@ -106,8 +106,7 @@ class MetaLearner:
         self.M = args.M
         self.database = args.database
         self.metatrain_dataset = metatrain_dataset
-        self.data_process = DataProcess(K=self.K, Q=args.Q, database=self.database, dim=args.dim,
-                                        device=self.device)
+        self.data_process = DataProcess(K=self.K, Q=args.Q, dim=args.dim, device=self.device)
 
         # -- model params
         self.evl = args.evl
