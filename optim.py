@@ -114,19 +114,19 @@ class my_optimizer:
         """
         # -- error
         feedback = dict({k: v for k, v in params.items() if 'fk' in k})
-        e = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - F.one_hot(label, num_classes=47)]
 
         if self.err_prop is 'FA':
             idx_e = 0
         elif self.err_prop is 'DFA':
             idx_e = -1
 
+        e = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
         for y, i in zip(reversed(activation), reversed(list(feedback))):
             e.insert(0, torch.matmul(e[idx_e], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
         # -- compute angles
         with torch.no_grad():
-            e_sym_vec = [torch.exp(logits) / torch.sum(torch.exp(logits), dim=1) - F.one_hot(label, num_classes=47)]
+            e_sym_vec = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
             feedback_sym = dict({k: v for k, v in params.items() if 'fc' in k})
             for y, i in zip(reversed(activation), reversed(list(feedback_sym))):
                 e_sym_vec.insert(0, torch.matmul(e_sym_vec[0], feedback_sym[i]) * (1 - torch.exp(-Beta * y)))
