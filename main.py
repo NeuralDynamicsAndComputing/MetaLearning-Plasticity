@@ -14,8 +14,7 @@ from torch.nn.utils import _stateless
 from torch.nn import functional as func
 # from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
-
-from utils import log, Plot, PCA_vis
+from utils import log, Plot
 from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
 
@@ -301,9 +300,6 @@ class MetaLearner:
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
 
-            if eps in [0, 10, 50, 100, 400, 1000, 1100, 1200]:
-                y, logits = _stateless.functional_call(self.model, params, x_trn.unsqueeze(1))
-                PCA_vis(y, y_trn, eps, self.res_dir)
 
         # -- plot
         self.plot()
