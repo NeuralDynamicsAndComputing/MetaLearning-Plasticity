@@ -210,7 +210,7 @@ class MetaLearner:
         for eps, data in enumerate(self.metatrain_dataset):
 
             # -- initialize
-            loss, accuracy, angles, meta_grad = [], [], [], []
+            loss, accuracy, angles, angles_grad, meta_grad = [], [], [], [], []
             W_norms = []
             params = self.reinitialize()
 
@@ -234,9 +234,10 @@ class MetaLearner:
                     quit()
 
                 # -- update network params
-                angle, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm = \
+                angle, angle_grad, angle_grad_vec, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm = \
                     self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
                 angles.append(angle)
+                angles_grad.append(angle_grad)
                 W_norms.append(norm_W)
 
             """ meta update """
@@ -266,10 +267,12 @@ class MetaLearner:
 
             # -- log
             log(accuracy, self.res_dir + '/acc.txt')
+            log([angle_grad_vec], self.res_dir + '/angle_grad_vec.txt')
             log(loss, self.res_dir + '/loss.txt')
             log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
             log(angle, self.res_dir + '/ang_meta.txt')
+            log(angle_grad, self.res_dir + '/ang_grad_meta.txt')
             log(angle_WB, self.res_dir + '/ang_WB_meta.txt')
             log(norm_W, self.res_dir + '/norm_W_meta.txt')
             log(W_mean, self.res_dir + '/W_mean_meta.txt')
@@ -281,6 +284,7 @@ class MetaLearner:
             log(y_std, self.res_dir + '/y_std_meta.txt')
             log(y_norm, self.res_dir + '/y_norm_meta.txt')
             log(angles, self.res_dir + '/ang.txt')
+            log(angles_grad, self.res_dir + '/ang_grad.txt')
             log(W_norms, self.res_dir + '/norm_W.txt')
             log(meta_grad, self.res_dir + '/meta_grad.txt')
 

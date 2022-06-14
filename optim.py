@@ -129,6 +129,30 @@ class my_optimizer:
             for e_fix, e_sym in zip(e, e_sym_vec):
                 angle.append(measure_angle(e_fix, e_sym))
 
+            # -- compute angle between update direction and gradient
+            lr, dr, tre, fur, fiv, six, svn, eit, nin, ten, elv, twl, trt, frt, fif, sxt, svt, etn, ntn = Theta
+
+            y = [*activation, F.softmax(logits, dim=1)]
+            angle_grad, my_grad_, sym_grad_, angle_grad_vec = [], [], [], []
+            for l in range(1, len(e_sym_vec)):
+                sym_grad = - torch.matmul(e_sym_vec[l].T, activation[l - 1])        # symmetric backprop
+
+                if '12' in self.vec:
+                    my_grad = - lr * torch.matmul(e[l].T, y[l - 1]) - frt * (torch.matmul(y[l].T, y[l - 1])
+                                - torch.matmul(torch.matmul(y[l].T, y[l]), feedback_sym['fc{}.weight'.format(l)]))
+                    # oja + fixed backprop
+                elif '16' in self.vec:
+                    my_grad = - lr * torch.matmul(e[l].T, activation[l - 1]) \
+                              - etn * torch.matmul(e[l].T, (e[l - 1] - ntn))        # homeostatic + fixed backprop
+                else:
+                    my_grad = - lr * torch.matmul(e[l].T, activation[l - 1])
+
+                angle_grad.append(measure_angle(sym_grad.ravel(), my_grad.ravel()))
+                my_grad_.append(my_grad.ravel())
+                sym_grad_.append(sym_grad.ravel())
+
+            angle_grad_vec.append(measure_angle(torch.concat(sym_grad_), torch.concat(my_grad_)))
+
             # -- mean and sd for modulator vectors
             e_mean, e_std, e_norm = [], [], []
             for e_fix in e:
@@ -154,4 +178,4 @@ class my_optimizer:
         # -- weight update
         self.update_rule([*activation, F.softmax(logits, dim=1)], e, params, feedback, Theta, self.vec, self.fbk)
 
-        return angle, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm
+        return angle, angle_grad, angle_grad_vec, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm
