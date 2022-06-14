@@ -93,11 +93,10 @@ def evolve_rule(activation, e, params, feedback, Theta):
 
 
 class my_optimizer:
-    def __init__(self, update_rule, vec, fbk, err_prop):
+    def __init__(self, update_rule, vec, fbk):
         self.update_rule = update_rule
         self.vec = vec
         self.fbk = fbk
-        self.err_prop = err_prop
 
     def __call__(self, params, logits, label, activation, Beta, Theta):
 
@@ -114,15 +113,9 @@ class my_optimizer:
         """
         # -- error
         feedback = dict({k: v for k, v in params.items() if 'fk' in k})
-
-        if self.err_prop is 'FA':
-            idx_e = 0
-        elif self.err_prop is 'DFA':
-            idx_e = -1
-
         e = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
         for y, i in zip(reversed(activation), reversed(list(feedback))):
-            e.insert(0, torch.matmul(e[idx_e], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
+            e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
 
         # -- compute angles
         with torch.no_grad():
@@ -146,12 +139,7 @@ class my_optimizer:
             # - angle b/w W and B and norm, mean, and SD for W
             angle_WB, norm_W, W_mean, W_std = [], [], [], []
             for i, i_sym in zip(feedback, feedback_sym):
-
-                if self.err_prop is 'FA':
-                    a = torch.flatten(feedback[i])  # feedback[i][10]
-                    b = torch.flatten(feedback_sym[i_sym])  # feedback_sym[i_sym][10]
-                    angle_WB.append(measure_angle(a, b))
-
+                angle_WB.append(measure_angle(feedback[i].ravel(), feedback_sym[i_sym].ravel()))
                 norm_W.append(torch.norm(feedback_sym[i_sym]))
                 W_std.append(feedback_sym[i_sym].std().item())
                 W_mean.append(feedback_sym[i_sym].mean().item())

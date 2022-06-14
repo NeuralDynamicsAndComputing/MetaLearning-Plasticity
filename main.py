@@ -37,18 +37,11 @@ class MyModel(nn.Module):
         self.fc5 = nn.Linear(70, dim_out, bias=False)
 
         # -- feedback
-        if args.err_prop is 'FA':
-            self.fk1 = nn.Linear(784, 170, bias=False)
-            self.fk2 = nn.Linear(170, 130, bias=False)
-            self.fk3 = nn.Linear(130, 100, bias=False)
-            self.fk4 = nn.Linear(100, 70, bias=False)
-            self.fk5 = nn.Linear(70, dim_out, bias=False)
-        elif args.err_prop is 'DFA':
-            self.fk1 = nn.Linear(784, dim_out, bias=False)
-            self.fk2 = nn.Linear(170, dim_out, bias=False)
-            self.fk3 = nn.Linear(130, dim_out, bias=False)
-            self.fk4 = nn.Linear(100, dim_out, bias=False)
-            self.fk5 = nn.Linear(70, dim_out, bias=False)
+        self.fk1 = nn.Linear(784, 170, bias=False)
+        self.fk2 = nn.Linear(170, 130, bias=False)
+        self.fk3 = nn.Linear(130, 100, bias=False)
+        self.fk4 = nn.Linear(100, 70, bias=False)
+        self.fk5 = nn.Linear(70, dim_out, bias=False)
 
         # -- learning params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
@@ -115,7 +108,7 @@ class MetaLearner:
 
         # -- optimization params
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(generic_rule, args.vec, args.fbk, args.err_prop)
+        self.OptimAdpt = my_optimizer(generic_rule, args.vec, args.fbk)
         self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
                                      {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
 
@@ -392,8 +385,6 @@ def parse_args():
     parser.add_argument('--vec', nargs='*', default=[], help='Learning rule terms.')
     parser.add_argument('--fbk', type=str, default='sym',
                         help='Feedback matrix type: 1) sym = Symmetric matrix; 2) fix = Fixed random matrix.')
-    parser.add_argument('--err_prop', type=str, default='FA',
-                        help='Error propagation type: 1) FA = Feedback Alignment; 2) DFA = Direct FA.')
 
     args = parser.parse_args()
 
