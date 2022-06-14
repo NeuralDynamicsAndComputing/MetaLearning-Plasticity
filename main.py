@@ -14,6 +14,7 @@ from torch.nn.utils import _stateless
 from torch.nn import functional as func
 # from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
+import matplotlib.pyplot as plt
 from utils import log, Plot
 from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
@@ -297,6 +298,26 @@ class MetaLearner:
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
 
+            if False:
+                if eps % 10 == 0:
+
+                    W_1 = params['fc1.weight'].ravel().detach().cpu().numpy()
+                    W_2 = params['fc2.weight'].ravel().detach().cpu().numpy()
+                    W_3 = params['fc3.weight'].ravel().detach().cpu().numpy()
+                    W_4 = params['fc4.weight'].ravel().detach().cpu().numpy()
+                    W_5 = params['fc5.weight'].ravel().detach().cpu().numpy()
+
+                    W = np.concatenate((W_1, W_2, W_3, W_4, W_5))
+
+                    n_bins = 100
+                    title = ['W1', 'W2', 'W3', 'W4', 'W5', 'W']
+                    for idx_t, w in enumerate([W_1, W_2, W_3, W_4, W_5, W]):
+
+                        weights = np.ones_like(w) / float(len(w))
+                        prob, bins, _ = plt.hist(w, n_bins, range=(-1, 1), density=False, histtype='step', color='red', weights=weights)
+                        plt.close()
+                        log(prob, self.res_dir + '/prob{}.txt'.format(title[idx_t]))
+                        log(bins, self.res_dir + '/bins{}.txt'.format(title[idx_t]))
 
         # -- plot
         self.plot()
