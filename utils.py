@@ -185,7 +185,7 @@ def accuracy(logits, label):
     return torch.eq(pred, label).sum().item() / len(label)
 
 
-def meta_stats(logits, params, label, y, Beta, res_dir):
+def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight_dist=False):
 
     with torch.no_grad():
         # -- activation stats
@@ -194,6 +194,10 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
             y_norm.append(y_.norm(dim=1).mean().item())
             y_mean.append(y_.mean().item())
             y_std.append(y_.std(dim=1).mean().item())
+
+        log(y_norm, res_dir + '/y_norm_meta.txt')
+        log(y_mean, res_dir + '/y_mean_meta.txt')
+        log(y_std, res_dir + '/y_std_meta.txt')
 
         # -- modulator vector stats
         feedback = dict({k: v for k, v in params.items() if 'fk' in k})
@@ -208,14 +212,19 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
             e_std.append(e_.std(dim=1).mean().item())
 
         e_sym = [e[-1]]
-        feedback_sym = dict({k: v for k, v in params.items() if 'fc' in k})
-        for y_, i in zip(reversed(y), reversed(list(feedback_sym))):
-            e_sym.insert(0, torch.matmul(e_sym[0], feedback_sym[i]) * (1 - torch.exp(-Beta * y_)))
+        W = dict({k: v for k, v in params.items() if 'fc' in k})
+        for y_, i in zip(reversed(y), reversed(list(W))):
+            e_sym.insert(0, torch.matmul(e_sym[0], W[i]) * (1 - torch.exp(-Beta * y_)))
 
         # -- angle b/w modulator vectors e_FA and e_BP
         e_angl = []
         for e_fix_, e_sym_ in zip(e, e_sym):
             e_angl.append(measure_angle(e_fix_.mean(dim=0), e_sym_.mean(dim=0)))
+
+        log(e_norm, res_dir + '/e_norm_meta.txt')
+        log(e_mean, res_dir + '/e_mean_meta.txt')
+        log(e_std, res_dir + '/e_std_meta.txt')
+        log(e_angl, res_dir + '/e_ang_meta.txt')
 
         # -- weight stats
         w_norm, w_mean, w_std = [], [], []
@@ -224,22 +233,37 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
             w_mean.append(w.mean().item())
             w_std.append(w.std().item())
 
-        # -- accuracy
-        acc = accuracy(logits, label)
-
-        # -- log
-        log([acc], res_dir + '/acc_meta.txt')
         log(w_norm, res_dir + '/w_norm_meta.txt')
         log(w_mean, res_dir + '/w_mean_meta.txt')
         log(w_std, res_dir + '/w_std_meta.txt')
-        log(e_norm, res_dir + '/e_norm_meta.txt')
-        log(e_mean, res_dir + '/e_mean_meta.txt')
-        log(e_std, res_dir + '/e_std_meta.txt')
-        log(e_angl, res_dir + '/e_ang_meta.txt')
-        log(y_norm, res_dir + '/y_norm_meta.txt')
-        log(y_mean, res_dir + '/y_mean_meta.txt')
-        log(y_std, res_dir + '/y_std_meta.txt')
 
+        # -- weight SVD
+        if weight_svd:  # todo: take func to utils
+            for k, w in W.items():
+
+                _, s, _ = torch.svd(w, compute_uv=False)
+
+                log([s.max().item()], res_dir + '/w{}_s_max_meta.txt'.format(k[2]))
+                log([s.min().item()], res_dir + '/w{}_s_min_meta.txt'.format(k[2]))
+                log([s.mean().item()], res_dir + '/w{}_s_mean_meta.txt'.format(k[2]))
+                log([s.std().item()], res_dir + '/w{}_s_std_meta.txt'.format(k[2]))
+
+        # -- weight distribution
+        if weight_dist:
+            n_bins = 100
+            for k, w in W.items():
+                w = w.ravel().detach().cpu().numpy()
+                prob, bins, _ = plt.hist(w, n_bins, range=(-1, 1), density=False, histtype='step', color='red',
+                                         weights=np.ones_like(w) / float(len(w)))
+                plt.close()
+
+                log(prob, res_dir + '/w{}_prob_meta.txt'.format(k[2]))
+                log(bins, res_dir + '/w{}_bins_meta.txt'.format(k[2]))
+
+        # -- accuracy
+        acc = accuracy(logits, label)
+
+        log([acc], res_dir + '/acc_meta.txt')
 
         """ 
         if False:
@@ -260,56 +284,15 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
                     err = torch.mean(torch.norm(y[i] - torch.matmul(y[i], torch.matmul(w.T, w)), dim=1) ** 2).item()
                     log([err], self.res_dir + '/err_{}_meta.txt'.format(k[2]))
     
-                s = np.linalg.svd(w.cpu().detach().numpy(), compute_uv=False)
-    
-                log([np.max(s)], self.res_dir + '/svd_max_{}_meta.txt'.format(k[2]))
-                log([np.min(s)], self.res_dir + '/svd_min_{}_meta.txt'.format(k[2]))
-                log([np.mean(s)], self.res_dir + '/svd_mean_{}_meta.txt'.format(k[2]))
-                log([np.std(s)], self.res_dir + '/svd_std_{}_meta.txt'.format(k[2]))
-    
         if False:
             for k, err in error.items():
                 log(err, self.res_dir + '/err_{}.txt'.format(k))
-    
-            for k, s in SVD_max.items():
-                log(s, self.res_dir + '/svd_max_{}.txt'.format(k))
-    
-            for k, s in SVD_min.items():
-                log(s, self.res_dir + '/svd_min_{}.txt'.format(k))
-    
-            for k, s in SVD_mean.items():
-                log(s, self.res_dir + '/svd_mean_{}.txt'.format(k))
-    
-            for k, s in SVD_std.items():
-                log(s, self.res_dir + '/svd_std_{}.txt'.format(k))
-    
-    
     
         # log([angle_grad_vec], self.res_dir + '/angle_grad_vec.txt')
         # log(angle_grad, self.res_dir + '/ang_grad_meta.txt')
         # log(angles, self.res_dir + '/ang.txt')
         # log(angles_grad, self.res_dir + '/ang_grad.txt')
     
-        if False:  # todo: take to utils
-            if eps % 10 == 0:
-    
-                W_1 = params['fc1.weight'].ravel().detach().cpu().numpy()
-                W_2 = params['fc2.weight'].ravel().detach().cpu().numpy()
-                W_3 = params['fc3.weight'].ravel().detach().cpu().numpy()
-                W_4 = params['fc4.weight'].ravel().detach().cpu().numpy()
-                W_5 = params['fc5.weight'].ravel().detach().cpu().numpy()
-    
-                W = np.concatenate((W_1, W_2, W_3, W_4, W_5))
-    
-                n_bins = 100
-                title = ['W1', 'W2', 'W3', 'W4', 'W5', 'W']
-                for idx_t, w in enumerate([W_1, W_2, W_3, W_4, W_5, W]):
-    
-                    weights = np.ones_like(w) / float(len(w))
-                    prob, bins, _ = plt.hist(w, n_bins, range=(-1, 1), density=False, histtype='step', color='red', weights=weights)
-                    plt.close()
-                    log(prob, self.res_dir + '/prob{}.txt'.format(title[idx_t]))
-                    log(bins, self.res_dir + '/bins{}.txt'.format(title[idx_t]))
         """
 
         """
