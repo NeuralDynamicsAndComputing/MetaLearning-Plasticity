@@ -227,14 +227,15 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
         # -- accuracy
         acc = accuracy(logits, label)
 
+        # -- log
         log([acc], res_dir + '/acc_meta.txt')
-        log(w_norm, res_dir + '/norm_W_meta.txt')
-        log(w_mean, res_dir + '/W_mean_meta.txt')
-        log(w_std, res_dir + '/W_std_meta.txt')
+        log(w_norm, res_dir + '/w_norm_meta.txt')
+        log(w_mean, res_dir + '/w_mean_meta.txt')
+        log(w_std, res_dir + '/w_std_meta.txt')
         log(e_norm, res_dir + '/e_norm_meta.txt')
         log(e_mean, res_dir + '/e_mean_meta.txt')
         log(e_std, res_dir + '/e_std_meta.txt')
-        log(e_angl, res_dir + '/ang_meta.txt')
+        log(e_angl, res_dir + '/e_ang_meta.txt')
         log(y_norm, res_dir + '/y_norm_meta.txt')
         log(y_mean, res_dir + '/y_mean_meta.txt')
         log(y_std, res_dir + '/y_std_meta.txt')
