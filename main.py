@@ -15,7 +15,7 @@ from torch.nn import functional as func
 # from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
 import matplotlib.pyplot as plt
-from utils import log, Plot
+from utils import log, Plot, meta_stats
 from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
 
@@ -170,28 +170,6 @@ class MetaLearner:
 
         return params
 
-    @staticmethod
-    def accuracy(logits, label):
-
-        pred = func.softmax(logits, dim=1).argmax(dim=1)
-
-        return torch.eq(pred, label).sum().item() / len(label)
-
-    def stats(self, params, x_qry, y_qry, loss, accuracy):
-
-        with torch.no_grad():
-
-            # -- compute meta-loss
-            _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
-            loss_meta = self.loss_func(logits, y_qry.reshape(-1))
-            loss.append(loss_meta.item())
-
-            # -- compute accuracy
-            acc = self.accuracy(logits, y_qry.reshape(-1))
-            accuracy.append(acc)
-
-        return loss, accuracy
-
     def train(self):
         """
             Model training.
@@ -200,8 +178,6 @@ class MetaLearner:
         for eps, data in enumerate(self.metatrain_dataset):
 
             # -- initialize
-            loss, accuracy, angles, angles_grad, meta_grad = [], [], [], [], []
-            W_norms = []
             params = self.reinitialize()
 
             # -- training data
@@ -212,9 +188,6 @@ class MetaLearner:
                 # print('Iter {} GPU Usage'.format(itr_adapt))
                 # gpu_usage()
 
-                # -- stats
-                loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
-
                 # -- predict
                 y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
 
@@ -224,59 +197,29 @@ class MetaLearner:
                     quit()
 
                 # -- update network params
-                angle, angle_grad, angle_grad_vec, e_mean, e_std, e_norm, angle_WB, norm_W, W_mean, W_std, y_mean, y_std, y_norm = \
-                    self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
-                angles.append(angle)
-                angles_grad.append(angle_grad)
-                W_norms.append(norm_W)
+                self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
 
             """ meta update """
             # -- predict
-            _, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
+            y, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
+
+            # -- compute and store meta stats
+            loss_meta = self.loss_func(logits, y_qry.ravel())
+            acc = meta_stats(logits, params, y_qry.ravel(), y, self.model.Beta, self.res_dir)
+
             if False:
                 filename = self.res_dir + '/comp_grph_meta'
                 make_dot(logits, params=dict(list(self.model.named_parameters()))).render(filename, format='png')
                 quit()
 
-            # -- compute loss and accuracy
-            loss_meta = self.loss_func(logits, y_qry.reshape(-1))
-            acc = self.accuracy(logits, y_qry.reshape(-1))
-
             # -- update params
-            Theta = []
-            for meta_param in self.Theta:
-                Theta.append(meta_param.detach().clone())
+            Theta = [p.detach().clone() for p in self.Theta]
             self.OptimMeta.zero_grad()
             loss_meta.backward()
-            for param in self.Theta:
-                try:
-                    meta_grad.append(param.grad.detach().cpu().numpy())
-                except AttributeError:
-                    pass
             self.OptimMeta.step()
 
             # -- log
-            log(accuracy, self.res_dir + '/acc.txt')
-            log([angle_grad_vec], self.res_dir + '/angle_grad_vec.txt')
-            log(loss, self.res_dir + '/loss.txt')
-            log([acc], self.res_dir + '/acc_meta.txt')
             log([loss_meta.item()], self.res_dir + '/loss_meta.txt')
-            log(angle, self.res_dir + '/ang_meta.txt')
-            log(angle_grad, self.res_dir + '/ang_grad_meta.txt')
-            log(angle_WB, self.res_dir + '/ang_WB_meta.txt')
-            log(norm_W, self.res_dir + '/norm_W_meta.txt')
-            log(W_mean, self.res_dir + '/W_mean_meta.txt')
-            log(W_std, self.res_dir + '/W_std_meta.txt')
-            log(e_mean, self.res_dir + '/e_mean_meta.txt')
-            log(e_std, self.res_dir + '/e_std_meta.txt')
-            log(e_norm, self.res_dir + '/e_norm_meta.txt')
-            log(y_mean, self.res_dir + '/y_mean_meta.txt')
-            log(y_std, self.res_dir + '/y_std_meta.txt')
-            log(y_norm, self.res_dir + '/y_norm_meta.txt')
-            log(angles, self.res_dir + '/ang.txt')
-            log(angles_grad, self.res_dir + '/ang_grad.txt')
-            log(W_norms, self.res_dir + '/norm_W.txt')
-            log(meta_grad, self.res_dir + '/meta_grad.txt')
 
             line = 'Train Episode: {}\tLoss: {:.6f}\tAccuracy: {:.3f}'.format(eps+1, loss_meta.item(), acc)
             for idx, param in enumerate(Theta):
@@ -284,27 +227,6 @@ class MetaLearner:
             print(line)
             with open(self.res_dir + '/params.txt', 'a') as f:
                 f.writelines(line+'\n')
-
-            if False:
-                if eps % 10 == 0:
-
-                    W_1 = params['fc1.weight'].ravel().detach().cpu().numpy()
-                    W_2 = params['fc2.weight'].ravel().detach().cpu().numpy()
-                    W_3 = params['fc3.weight'].ravel().detach().cpu().numpy()
-                    W_4 = params['fc4.weight'].ravel().detach().cpu().numpy()
-                    W_5 = params['fc5.weight'].ravel().detach().cpu().numpy()
-
-                    W = np.concatenate((W_1, W_2, W_3, W_4, W_5))
-
-                    n_bins = 100
-                    title = ['W1', 'W2', 'W3', 'W4', 'W5', 'W']
-                    for idx_t, w in enumerate([W_1, W_2, W_3, W_4, W_5, W]):
-
-                        weights = np.ones_like(w) / float(len(w))
-                        prob, bins, _ = plt.hist(w, n_bins, range=(-1, 1), density=False, histtype='step', color='red', weights=weights)
-                        plt.close()
-                        log(prob, self.res_dir + '/prob{}.txt'.format(title[idx_t]))
-                        log(bins, self.res_dir + '/bins{}.txt'.format(title[idx_t]))
 
         # -- plot
         self.plot()
