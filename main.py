@@ -11,13 +11,12 @@ from torch import nn, optim
 from random import randrange
 from torchviz import make_dot
 from torch.nn.utils import _stateless
-from torch.nn import functional as func
 # from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
-import matplotlib.pyplot as plt
+
 from utils import log, Plot, meta_stats
-from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
 from optim import my_optimizer, evolve_rule, generic_rule
+from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
