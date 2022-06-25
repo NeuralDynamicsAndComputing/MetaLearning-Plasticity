@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 
 
 class FashionMNISTDataset(Dataset):
-    def __init__(self, K, Q=5):
+    def __init__(self, K, Q, dim):
 
         self.fashionmnist_dir = './data/fashionmnist/'
 
@@ -23,7 +23,7 @@ class FashionMNISTDataset(Dataset):
         self.Q = Q
 
         self.char_path = [folder for folder, folders, _ in os.walk(self.fashionmnist_dir) if not folders]
-        self.transform = transforms.Compose([transforms.ToTensor()])
+        self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
 
     def write_to_file(self):
         n_class = 10
