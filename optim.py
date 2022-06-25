@@ -5,7 +5,7 @@ from utils import normalize_vec, measure_angle
 
 
 def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
-    lr, dr, tre, fur, fiv, six, svn, eit, nin, ten, elv, twl, trt, frt, fif, sxt, svt, etn, ntn = Theta
+    lr, tre, fiv, nin, elv, trt, frt, etn, ntn = Theta
 
     # -- weight update
     i = 0
@@ -16,38 +16,20 @@ def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
 
                 if '1' in vec:
                     p.update -= tre * torch.matmul(activation[i + 1].T, e[i])
-                if '2' in vec:
-                    p.update -= fur * torch.matmul(torch.matmul(activation[i + 1].T, activation[i + 1]), p)
                 if '3' in vec:
                     p.update -= fiv * torch.matmul(e[i + 1].T, e[i])
-                if '4' in vec:
-                    p.update -= six * torch.matmul(activation[i + 1].repeat(p.shape[0], 1), activation[i].repeat(p.shape[0], 1) - p)
-                if '5' in vec:
-                    p.update -= svn
-                if '6' in vec:
-                    p.update -= eit * e[i + 1].T.repeat(1, p.shape[1])
                 if '7' in vec:
                     p.update -= nin * e[i].repeat(p.shape[0], 1)
-                if '8' in vec:
-                    p.update -= ten * (torch.matmul(e[i + 1].T, e[i]) - torch.matmul(torch.matmul(e[i + 1].T, e[i + 1]), p))
                 if '9' in vec:
                     p.update -= elv * (torch.matmul(e[i + 1].T, e[i]) - torch.matmul(p, torch.matmul(e[i].T, e[i])))
-                if '10' in vec:
-                    p.update -= twl * (torch.matmul(activation[i + 1].T, activation[i]) - torch.matmul(activation[i + 1].T, p))
                 if '11' in vec:
                     p.update -= trt * (torch.matmul(activation[i + 1].T, e[i]) - torch.matmul(p, torch.matmul(e[i].T, e[i])))
                 if '12' in vec:
                     p.update -= frt * (torch.matmul(activation[i + 1].T, activation[i]) - torch.matmul(torch.matmul(activation[i + 1].T, activation[i + 1]), p))
-                if '13' in vec:
-                    p.update -= fif * torch.matmul(e[i + 1].T, (e[i] - 0.0))  # * (torch.matmul(torch.matmul(activation[i + 1], torch.matmul(activation[i + 1].T, activation[i + 1])).T, activation[i]) - p)  # α(xy3−w)
-                if '14' in vec:
-                    p.update -= sxt * torch.matmul(torch.matmul(e[i + 1].T, e[i + 1]), p)
-                if '15' in vec:
-                    p.update -= svt * torch.matmul(p, torch.matmul(e[i].T, e[i]))
                 if '16' in vec:
                     p.update -= etn * torch.matmul(e[i + 1].T, (e[i] - ntn))  # todo: try the other way around
 
-                params[k] = (1 - torch.exp(dr)) * p + p.update
+                params[k] = p + p.update
                 params[k].adapt = p.adapt
 
             i += 1
@@ -130,7 +112,7 @@ class my_optimizer:
                 angle.append(measure_angle(e_fix, e_sym))
 
             # -- compute angle between update direction and gradient
-            lr, dr, tre, fur, fiv, six, svn, eit, nin, ten, elv, twl, trt, frt, fif, sxt, svt, etn, ntn = Theta
+            lr, tre, fiv, nin, elv, trt, frt, etn, ntn = Theta
 
             y = [*activation, F.softmax(logits, dim=1)]
             angle_grad, my_grad_, sym_grad_, angle_grad_vec = [], [], [], []
