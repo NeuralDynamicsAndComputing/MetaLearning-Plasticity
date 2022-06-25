@@ -20,8 +20,8 @@ from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDa
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-np.random.seed(0)
-torch.manual_seed(0)
+np.random.seed(5)
+torch.manual_seed(5)
 
 
 class MyModel(nn.Module):
