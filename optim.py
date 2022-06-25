@@ -1,7 +1,6 @@
 import torch
 
 from torch.nn import functional as F
-from utils import normalize_vec, measure_angle
 
 
 def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
