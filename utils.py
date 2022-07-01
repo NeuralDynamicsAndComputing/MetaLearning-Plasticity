@@ -268,10 +268,6 @@ def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight
         """ 
         if False:
             error = {'0': [], '1': [], '2': [], '3': [], '4': []}
-            SVD_max = {'0': [], '1': [], '2': [], '3': [], '4': []}
-            SVD_min = {'0': [], '1': [], '2': [], '3': [], '4': []}
-            SVD_mean = {'0': [], '1': [], '2': [], '3': [], '4': []}
-            SVD_std = {'0': [], '1': [], '2': [], '3': [], '4': []}
     
         if False:  # todo: take func to utils
             W = dict({k: v for k, v in params.items() if 'fc' in k})
