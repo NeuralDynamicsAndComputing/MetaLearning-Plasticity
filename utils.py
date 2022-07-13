@@ -200,10 +200,10 @@ def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight
         log(y_std, res_dir + '/y_std_meta.txt')
 
         # -- modulator vector stats
-        feedback = dict({k: v for k, v in params.items() if 'fk' in k})
+        B = dict({k: v for k, v in params.items() if 'fk' in k})
         e = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
-        for y_, i in zip(reversed(y), reversed(list(feedback))):
-            e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y_)))
+        for y_, i in zip(reversed(y), reversed(list(B))):
+            e.insert(0, torch.matmul(e[0], B[i]) * (1 - torch.exp(-Beta * y_)))
 
         e_norm, e_mean, e_std = [], [], []
         for e_ in e:
