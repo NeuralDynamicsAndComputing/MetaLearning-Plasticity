@@ -229,7 +229,7 @@ def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight
         # -- weight stats
         w_norm, w_mean, w_std = [], [], []
         for w in [v for k, v in params.items() if 'fc' in k]:
-            w_norm.append(w.norm().item())
+            w_norm.append(w.norm(dim=1).mean().item())
             w_mean.append(w.mean().item())
             w_std.append(w.std().item())
 
