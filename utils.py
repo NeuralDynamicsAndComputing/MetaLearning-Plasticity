@@ -211,6 +211,17 @@ def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight
             e_mean.append(e_.mean().item())
             e_std.append(e_.std(dim=1).mean().item())
 
+        # -- orthonormality errors
+        W = [v for k, v in params.items() if 'fc' in k]
+        E1, E2 = [], []
+        activation = [*y, F.softmax(logits, dim=1)]
+        for i in range(len(activation)-1):
+            E1.append((torch.norm(torch.matmul(activation[i], W[i].T)-torch.matmul(torch.matmul(activation[i+1], W[i]), W[i].T)) ** 2).item())
+            E2.append((torch.norm(activation[i]-torch.matmul(activation[i+1], W[i])) ** 2).item())
+
+        log(E1, res_dir + '/E1_meta.txt')
+        log(E2, res_dir + '/E2_meta.txt')
+
         e_sym = [e[-1]]
         W = dict({k: v for k, v in params.items() if 'fc' in k})
         for y_, i in zip(reversed(y), reversed(list(W))):
