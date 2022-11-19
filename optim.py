@@ -4,29 +4,19 @@ from torch.nn import functional as F
 
 
 def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
-    lr, tre, fiv, nin, elv, trt, frt, etn, ntn = Theta
 
-    # -- weight update
+    # -- weight update (F_bio)
     i = 0
     for k, p in params.items():
         if 'fc' in k:
             if p.adapt and 'weight' in k:
-                p.update = - lr * torch.matmul(e[i + 1].T, activation[i])
+                p.update = - Theta[0] * torch.matmul(e[i + 1].T, activation[i])
 
-                if '1' in vec:
-                    p.update -= tre * torch.matmul(activation[i + 1].T, e[i])
                 if '3' in vec:
-                    p.update -= fiv * torch.matmul(e[i + 1].T, e[i])
-                if '7' in vec:
-                    p.update -= nin * e[i].repeat(p.shape[0], 1)
-                if '9' in vec:
-                    p.update -= elv * (torch.matmul(e[i + 1].T, e[i]) - torch.matmul(p, torch.matmul(e[i].T, e[i])))
-                if '11' in vec:
-                    p.update -= trt * (torch.matmul(activation[i + 1].T, e[i]) - torch.matmul(p, torch.matmul(e[i].T, e[i])))
+                    p.update -= Theta[1] * torch.matmul(e[i + 1].T, (e[i]))
                 if '12' in vec:
-                    p.update -= frt * (torch.matmul(activation[i + 1].T, activation[i]) - torch.matmul(torch.matmul(activation[i + 1].T, activation[i + 1]), p))
-                if '16' in vec:
-                    p.update -= etn * torch.matmul(e[i + 1].T, (e[i] - ntn))  # todo: try the other way around
+                    p.update -= Theta[2] * (torch.matmul(activation[i + 1].T, activation[i]) -
+                                            torch.matmul(torch.matmul(activation[i + 1].T, activation[i + 1]), p))
 
                 params[k] = p + p.update
                 params[k].adapt = p.adapt
