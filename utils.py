@@ -185,31 +185,14 @@ def accuracy(logits, label):
     return torch.eq(pred, label).sum().item() / len(label)
 
 
-def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight_dist=False):
+def meta_stats(logits, params, label, y, Beta, res_dir):
 
     with torch.no_grad():
-        # -- activation stats
-        y_norm, y_mean, y_std = [], [], []
-        for y_ in [*y, F.softmax(logits, dim=1)]:
-            y_norm.append(y_.norm(dim=1).mean().item())
-            y_mean.append(y_.mean().item())
-            y_std.append(y_.std(dim=1).mean().item())
-
-        log(y_norm, res_dir + '/y_norm_meta.txt')
-        log(y_mean, res_dir + '/y_mean_meta.txt')
-        log(y_std, res_dir + '/y_std_meta.txt')
-
         # -- modulator vector stats
         B = dict({k: v for k, v in params.items() if 'fk' in k})
         e = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
         for y_, i in zip(reversed(y), reversed(list(B))):
             e.insert(0, torch.matmul(e[0], B[i]) * (1 - torch.exp(-Beta * y_)))
-
-        e_norm, e_mean, e_std = [], [], []
-        for e_ in e:
-            e_norm.append(e_.norm(dim=1).mean().item())
-            e_mean.append(e_.mean().item())
-            e_std.append(e_.std(dim=1).mean().item())
 
         # -- orthonormality errors
         W = [v for k, v in params.items() if 'fc' in k]
@@ -217,10 +200,8 @@ def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight
         activation = [*y, F.softmax(logits, dim=1)]
         for i in range(len(activation)-1):
             E1.append((torch.norm(torch.matmul(activation[i], W[i].T)-torch.matmul(torch.matmul(activation[i+1], W[i]), W[i].T)) ** 2).item())
-            E2.append((torch.norm(activation[i]-torch.matmul(activation[i+1], W[i])) ** 2).item())
 
         log(E1, res_dir + '/E1_meta.txt')
-        log(E2, res_dir + '/E2_meta.txt')
 
         e_sym = [e[-1]]
         W = dict({k: v for k, v in params.items() if 'fc' in k})
@@ -232,113 +213,11 @@ def meta_stats(logits, params, label, y, Beta, res_dir, weight_svd=False, weight
         for e_fix_, e_sym_ in zip(e, e_sym):
             e_angl.append(measure_angle(e_fix_.mean(dim=0), e_sym_.mean(dim=0)))
 
-        log(e_norm, res_dir + '/e_norm_meta.txt')
-        log(e_mean, res_dir + '/e_mean_meta.txt')
-        log(e_std, res_dir + '/e_std_meta.txt')
         log(e_angl, res_dir + '/e_ang_meta.txt')
-
-        # -- weight stats
-        w_norm, w_mean, w_std = [], [], []
-        for w in [v for k, v in params.items() if 'fc' in k]:
-            w_norm.append(w.norm(dim=1).mean().item())
-            w_mean.append(w.mean().item())
-            w_std.append(w.std().item())
-
-        log(w_norm, res_dir + '/w_norm_meta.txt')
-        log(w_mean, res_dir + '/w_mean_meta.txt')
-        log(w_std, res_dir + '/w_std_meta.txt')
-
-        # -- weight SVD
-        if weight_svd:  # todo: take func to utils
-            for k, w in W.items():
-
-                _, s, _ = torch.svd(w, compute_uv=False)
-
-                log([s.max().item()], res_dir + '/w{}_s_max_meta.txt'.format(k[2]))
-                log([s.min().item()], res_dir + '/w{}_s_min_meta.txt'.format(k[2]))
-                log([s.mean().item()], res_dir + '/w{}_s_mean_meta.txt'.format(k[2]))
-                log([s.std().item()], res_dir + '/w{}_s_std_meta.txt'.format(k[2]))
-
-        # -- weight distribution
-        if weight_dist:
-            n_bins = 100
-            for k, w in W.items():
-                w = w.ravel().detach().cpu().numpy()
-                prob, bins, _ = plt.hist(w, n_bins, range=(-1, 1), density=False, histtype='step', color='red',
-                                         weights=np.ones_like(w) / float(len(w)))
-                plt.close()
-
-                log(prob, res_dir + '/w{}_prob_meta.txt'.format(k[2]))
-                log(bins, res_dir + '/w{}_bins_meta.txt'.format(k[2]))
 
         # -- accuracy
         acc = accuracy(logits, label)
 
         log([acc], res_dir + '/acc_meta.txt')
-
-        """ 
-        if False:
-            error = {'0': [], '1': [], '2': [], '3': [], '4': []}
-    
-        if False:  # todo: take func to utils
-            W = dict({k: v for k, v in params.items() if 'fc' in k})
-            for i, (k, w) in enumerate(W.items()):
-                if False:
-                    err = torch.norm(torch.matmul(y[i], w.T) -
-                                     torch.matmul(torch.matmul(self.model.sopl(torch.matmul(y[i], w.T)), w), w.T)) ** 2
-                    log([err], self.res_dir + '/err_{}_meta.txt'.format(k[2]))
-                if True:
-                    err = torch.mean(torch.norm(y[i] - torch.matmul(y[i], torch.matmul(w.T, w)), dim=1) ** 2).item()
-                    log([err], self.res_dir + '/err_{}_meta.txt'.format(k[2]))
-    
-        if False:
-            for k, err in error.items():
-                log(err, self.res_dir + '/err_{}.txt'.format(k))
-    
-        # log([angle_grad_vec], self.res_dir + '/angle_grad_vec.txt')
-        # log(angle_grad, self.res_dir + '/ang_grad_meta.txt')
-        # log(angles, self.res_dir + '/ang.txt')
-        # log(angles_grad, self.res_dir + '/ang_grad.txt')
-    
-        """
-
-        """
-        # -- compute angles   # todo: remove
-        if False:
-            with torch.no_grad():
-                e_sym_vec = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
-                feedback_sym = dict({k: v for k, v in params.items() if 'fc' in k})
-                for y, i in zip(reversed(activation), reversed(list(feedback_sym))):
-                    e_sym_vec.insert(0, torch.matmul(e_sym_vec[0], feedback_sym[i]) * (1 - torch.exp(-Beta * y)))
-    
-                # -- angle b/w modulator vectors e_FA and e_BP  # todo: remove
-                angle = []
-                for e_fix, e_sym in zip(e, e_sym_vec):
-                    angle.append(measure_angle(e_fix, e_sym))
-    
-                # -- compute angle between update direction and gradient  # todo: remove
-                lr, tre, fiv, nin, elv, trt, frt, etn, ntn = Theta
-    
-                y = [*activation, F.softmax(logits, dim=1)]
-                angle_grad, my_grad_, sym_grad_, angle_grad_vec = [], [], [], []
-                for l in range(1, len(e_sym_vec)):
-                    sym_grad = - torch.matmul(e_sym_vec[l].T, activation[l - 1])        # symmetric backprop
-    
-                    if '12' in self.vec:
-                        my_grad = - lr * torch.matmul(e[l].T, y[l - 1]) - frt * (torch.matmul(y[l].T, y[l - 1])
-                                    - torch.matmul(torch.matmul(y[l].T, y[l]), feedback_sym['fc{}.weight'.format(l)]))
-                        # oja + fixed backprop
-                    elif '16' in self.vec:
-                        my_grad = - lr * torch.matmul(e[l].T, activation[l - 1]) \
-                                  - etn * torch.matmul(e[l].T, (e[l - 1] - ntn))        # homeostatic + fixed backprop
-                    else:
-                        my_grad = - lr * torch.matmul(e[l].T, activation[l - 1])
-    
-                    angle_grad.append(measure_angle(sym_grad.ravel(), my_grad.ravel()))
-                    my_grad_.append(my_grad.ravel())
-                    sym_grad_.append(sym_grad.ravel())
-    
-                angle_grad_vec.append(measure_angle(torch.concat(sym_grad_), torch.concat(my_grad_)))
-        """
 
     return acc
