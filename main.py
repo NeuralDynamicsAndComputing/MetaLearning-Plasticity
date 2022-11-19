@@ -46,15 +46,16 @@ class MyModel(nn.Module):
         # -- learning params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.alpha_fwd = nn.Parameter(torch.tensor(args.a).float())
-        self.tre_fwd = nn.Parameter(torch.tensor(args.b).float())
-        self.fiv_fwd = nn.Parameter(torch.tensor(args.c).float())
-        self.nin_fwd = nn.Parameter(torch.tensor(args.d).float())
-        self.elv_fwd = nn.Parameter(torch.tensor(args.e).float())
-        self.trt_fwd = nn.Parameter(torch.tensor(args.f).float())
-        self.frt_fwd = nn.Parameter(torch.tensor(args.g).float())
-        self.etn_fwd = nn.Parameter(torch.tensor(args.h).float())
-        self.ntn_fwd = nn.Parameter(torch.tensor(args.i).float())
+        self.a_fwd = nn.Parameter(torch.tensor(args.a).float())
+        self.b_fwd = nn.Parameter(torch.tensor(args.b).float())
+        self.c_fwd = nn.Parameter(torch.tensor(args.c).float())
+        self.d_fwd = nn.Parameter(torch.tensor(args.d).float())
+        self.e_fwd = nn.Parameter(torch.tensor(args.e).float())
+        self.f_fwd = nn.Parameter(torch.tensor(args.f).float())
+        self.g_fwd = nn.Parameter(torch.tensor(args.g).float())
+        self.h_fwd = nn.Parameter(torch.tensor(args.h).float())
+        self.i_fwd = nn.Parameter(torch.tensor(args.i).float())
+        self.j_fwd = nn.Parameter(torch.tensor(args.i).float())
 
         # -- non-linearity
         self.Beta = 10
