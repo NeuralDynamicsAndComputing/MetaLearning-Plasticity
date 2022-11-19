@@ -202,8 +202,18 @@ class MetaLearner:
             # -- predict
             y, logits = _stateless.functional_call(self.model, params, x_qry.unsqueeze(1))
 
+            # -- L1 regularization
+            l1_reg = None
+            for T in self.model.params_fwd.parameters():
+                if l1_reg is None:
+                    l1_reg = T.norm(1)
+                else:
+                    l1_reg = l1_reg + T.norm(1)
+
+            reg_lambda = 0.  # todo: pass as arg  # 1.5
+            loss_meta = self.loss_func(logits, y_qry.ravel()) + l1_reg * reg_lambda
+
             # -- compute and store meta stats
-            loss_meta = self.loss_func(logits, y_qry.ravel())
             acc = meta_stats(logits, params, y_qry.ravel(), y, self.model.Beta, self.res_dir)
 
             if False:
