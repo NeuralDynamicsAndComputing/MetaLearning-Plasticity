@@ -11,7 +11,7 @@ from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, Plot, meta_stats
-from optim import my_optimizer, evolve_rule, generic_rule
+from optim import my_optimizer, generic_rule
 from dataset import EmnistDataset, DataProcess
 
 warnings.simplefilter(action='ignore', category=UserWarning)
