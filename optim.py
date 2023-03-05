@@ -12,11 +12,11 @@ def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
             if p.adapt and 'weight' in k:
                 p.update = - Theta[0] * torch.matmul(e[i + 1].T, activation[i])
 
-                if '3' in vec:
-                    p.update -= Theta[1] * torch.matmul(e[i + 1].T, (e[i]))
-                if '12' in vec:
-                    p.update -= Theta[2] * (torch.matmul(activation[i + 1].T, activation[i]) -
-                                            torch.matmul(torch.matmul(activation[i + 1].T, activation[i + 1]), p))
+                if '2' in vec:
+                    p.update -= Theta[2] * torch.matmul(e[i + 1].T, e[i])
+                if '9' in vec:
+                    p.update -= Theta[9] * (torch.matmul(activation[i + 1].T, activation[i]) - torch.matmul(
+                        torch.matmul(activation[i + 1].T, activation[i + 1]), p))
 
                 params[k] = p + p.update
                 params[k].adapt = p.adapt
