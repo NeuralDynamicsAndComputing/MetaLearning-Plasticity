@@ -4,7 +4,6 @@ import warnings
 import argparse
 import datetime
 
-from git import Repo
 from torch import nn, optim
 from random import randrange
 from torch.nn.utils import _stateless
@@ -151,7 +150,7 @@ class MetaLearner:
 
         self.model.apply(self.weights_init)
 
-        if self.fbk == 'sym':  # todo: avoid manually initializing B.
+        if self.fbk == 'sym':
             self.model.fk1.weight.data = self.model.fc1.weight.data
             self.model.fk2.weight.data = self.model.fc2.weight.data
             self.model.fk3.weight.data = self.model.fc3.weight.data
@@ -305,8 +304,7 @@ def parse_args():
 
     # -- storage settings
     s_dir = os.getcwd()
-    local_repo = Repo(path=s_dir)
-    args.res_dir = os.path.join( s_dir, args.res, local_repo.active_branch.name, args.test_name,
+    args.res_dir = os.path.join(s_dir, args.res, args.test_name,
                                 datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_') + str(randrange(40)))
     os.makedirs(args.res_dir)
 
