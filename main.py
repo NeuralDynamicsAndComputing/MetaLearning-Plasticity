@@ -20,9 +20,6 @@ from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDa
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-np.random.seed(7)
-torch.manual_seed(7)
-
 
 class MyModel(nn.Module):
     def __init__(self, args):
@@ -97,6 +94,7 @@ class MetaLearner:
         self.fbk = args.fbk
 
         # -- optimization params
+        self.lamb = args.lamb
         self.loss_func = nn.CrossEntropyLoss()
         self.OptimAdpt = my_optimizer(generic_rule, args.vec, args.fbk)
         self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
@@ -211,8 +209,7 @@ class MetaLearner:
                 else:
                     l1_reg = l1_reg + T.norm(1)
 
-            reg_lambda = 0.  # todo: pass as arg  # 1.5
-            loss_meta = self.loss_func(logits, y_qry.ravel()) + l1_reg * reg_lambda
+            loss_meta = self.loss_func(logits, y_qry.ravel()) + l1_reg * self.lamb
 
             # -- compute and store meta stats
             acc = meta_stats(logits, params, y_qry.ravel(), y, self.model.Beta, self.res_dir)
@@ -287,6 +284,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('--gpu_mode', type=int, default=1, help='Accelerate the script using GPU.')
+    parser.add_argument('--seed', type=int, default=1, help='.')
 
     # -- data params
     parser.add_argument('--database', type=str, default='emnist', help='The database.')
@@ -298,6 +296,7 @@ def parse_args():
     parser.add_argument('--K', type=int, default=50, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
+    parser.add_argument('--lamb', type=float, default=1.5, help='.')
     parser.add_argument('--lr_meta_fwd', type=float, default=5e-3, help='.')
     parser.add_argument('--lr_meta_fbk', type=float, default=5e-3, help='.')
     parser.add_argument('--a', type=float, default=5e-3, help='.')
