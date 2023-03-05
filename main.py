@@ -273,46 +273,6 @@ class MetaLearner:
         # -- plot
         self.plot()
 
-    def test(self, metatest_dataset, name, M):
-        """
-            Meta testing.
-        """
-        self.model.train()
-
-        idx_plot = []
-        for eps, data in enumerate(metatest_dataset):
-            # -- initialize
-            loss, accuracy = [], []
-            params = self.reinitialize()
-
-            # -- training data
-            x_trn, y_trn, x_qry, y_qry = self.data_process(data, M)
-
-            """ train """
-            for itr_adapt, (x, label) in enumerate(zip(x_trn, y_trn)):
-
-                # -- stats
-                loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
-
-                # -- predict
-                y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
-
-                # -- update network params
-                _ = self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
-
-            # -- compute loss and accuracy
-            loss, accuracy = self.stats(params, x_qry, y_qry, loss, accuracy)
-
-            # -- log
-            log(accuracy, self.res_dir + '/acc_test_' + name + '.txt')
-            log(loss, self.res_dir + '/loss_test_' + name + '.txt')
-
-            idx_plot.append(eps)
-
-        # -- plot
-        self.plot.adapt_accuracy(filename='/acc_test_' + name + '.txt', savename='/adapt_accuracy_' + name, idx_plot=idx_plot)
-        self.plot.adapt_loss(filename='/loss_test_' + name + '.txt', savename='/adapt_loss_' + name, idx_plot=idx_plot)
-
 
 def parse_args():
     desc = "Pytorch implementation of meta-learning model for discovering biologically plausible plasticity rules."
