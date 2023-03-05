@@ -197,56 +197,6 @@ class EmnistDataset(Dataset):
         return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
 
 
-class OmniglotDataset(Dataset):
-    def __init__(self, K, Q, dim):
-        try:
-            # -- create directory
-            s_dir = os.getcwd()
-            omniglot_dir = s_dir + '/data/omniglot/'
-            file_name = 'images_background'
-            os.makedirs(omniglot_dir)
-
-            # -- download
-            omniglot_url = 'https://github.com/brendenlake/omniglot/raw/master/python'
-            self.download(omniglot_url + '/' + file_name + '.zip', omniglot_dir + file_name + '.zip')
-
-            # -- unzip
-            with zipfile.ZipFile(omniglot_dir + file_name + '.zip', 'r') as zip_file:
-                zip_file.extractall(omniglot_dir)
-        except FileExistsError:
-            pass
-
-        self.path = omniglot_dir + file_name
-        self.K = K
-        self.Q = Q
-
-        # --
-        self.char_path = [folder for folder, folders, _ in os.walk(self.path) if not folders]
-        self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
-
-    @staticmethod
-    def download(url, filename):
-        res = requests.get(url, stream=True)
-        with open(filename, 'wb') as f:
-            for chunk in res.iter_content(chunk_size=1024):
-                if chunk:
-                    f.write(chunk)
-
-    def __len__(self):
-        return len(self.char_path)
-
-    def __getitem__(self, idx):
-
-        img = []
-        for img_ in os.listdir(self.char_path[idx]): 
-            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
-
-        img = torch.cat(img)
-        idx_vec = idx * torch.ones_like(torch.empty(20), dtype=int)
-
-        return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
-
-
 class DataProcess:
     def __init__(self, K, Q, dim, device='cpu', iid=True):
         self.K = K

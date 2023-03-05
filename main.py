@@ -4,19 +4,16 @@ import warnings
 import argparse
 import datetime
 
-import numpy as np
-
 from git import Repo
 from torch import nn, optim
 from random import randrange
 from torchviz import make_dot
 from torch.nn.utils import _stateless
-# from GPUtil import showUtilization as gpu_usage
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, Plot, meta_stats
 from optim import my_optimizer, evolve_rule, generic_rule
-from dataset import MNISTDataset, EmnistDataset, FashionMNISTDataset, OmniglotDataset, DataProcess
+from dataset import EmnistDataset, DataProcess
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -351,32 +348,12 @@ def check_args(args):
 def main():
     args = parse_args()
 
-    # print("Initial GPU Usage")
-    # gpu_usage()
-
     # -- meta-train
     dataset = EmnistDataset(K=args.K, Q=args.Q, dim=args.dim)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
     metaplasticity_model = MetaLearner(metatrain_dataset, args)
     metaplasticity_model.train()
-
-    # -- meta-test: MNIST
-    M = 9
-    dataset = MNISTDataset(K=args.K, Q=args.Q, dim=args.dim)
-    metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
-    metaplasticity_model.test(metatest_dataset, 'MNIST', M)
-
-    # -- meta-test: FashionMNIST
-    M = 5
-    dataset = FashionMNISTDataset(K=args.K, Q=args.Q, dim=args.dim)
-    metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
-    metaplasticity_model.test(metatest_dataset, 'FashionMNIST_{}'.format(M), M)
-
-    M = 9
-    dataset = FashionMNISTDataset(K=args.K, Q=args.Q, dim=args.dim)
-    metatest_dataset = DataLoader(dataset=dataset, batch_size=M, drop_last=True)
-    metaplasticity_model.test(metatest_dataset, 'FashionMNIST_{}'.format(M), M)
 
 if __name__ == '__main__':
     main()
