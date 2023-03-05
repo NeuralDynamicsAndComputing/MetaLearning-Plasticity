@@ -7,7 +7,6 @@ import datetime
 from git import Repo
 from torch import nn, optim
 from random import randrange
-from torchviz import make_dot
 from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler
 
@@ -180,16 +179,9 @@ class MetaLearner:
 
             """ adaptation """
             for itr_adapt, (x, label) in enumerate(zip(x_trn, y_trn)):
-                # print('Iter {} GPU Usage'.format(itr_adapt))
-                # gpu_usage()
 
                 # -- predict
                 y, logits = _stateless.functional_call(self.model, params, x.unsqueeze(0).unsqueeze(0))
-
-                if False:
-                    filename = self.res_dir + '/comp_grph_adpt'
-                    make_dot(logits, params=dict(list(self.model.named_parameters()))).render(filename, format='png')
-                    quit()
 
                 # -- update network params
                 self.OptimAdpt(params, logits, label, y, self.model.Beta, self.Theta)
@@ -210,11 +202,6 @@ class MetaLearner:
 
             # -- compute and store meta stats
             acc = meta_stats(logits, params, y_qry.ravel(), y, self.model.Beta, self.res_dir)
-
-            if False:
-                filename = self.res_dir + '/comp_grph_meta'
-                make_dot(logits, params=dict(list(self.model.named_parameters()))).render(filename, format='png')
-                quit()
 
             # -- update params
             Theta = [p.detach().clone() for p in self.Theta]
@@ -354,6 +341,7 @@ def main():
     metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
     metaplasticity_model = MetaLearner(metatrain_dataset, args)
     metaplasticity_model.train()
+
 
 if __name__ == '__main__':
     main()
