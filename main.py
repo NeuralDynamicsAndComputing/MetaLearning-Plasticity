@@ -17,10 +17,18 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 
 
 class MyModel(nn.Module):
+    """
+        Classifier model
+
+    Defines the layers and parameters of
+        1) the classification network,
+        2) feedback alignment model, and
+        3) the plasticity meta-parameters.
+    """
     def __init__(self, args):
         super(MyModel, self).__init__()
 
-        # -- prediction params
+        # -- forward pathway
         dim_out = 47
         self.fc1 = nn.Linear(784, 170, bias=False)
         self.fc2 = nn.Linear(170, 130, bias=False)
@@ -28,14 +36,14 @@ class MyModel(nn.Module):
         self.fc4 = nn.Linear(100, 70, bias=False)
         self.fc5 = nn.Linear(70, dim_out, bias=False)
 
-        # -- feedback
+        # -- feedback pathway
         self.fk1 = nn.Linear(784, 170, bias=False)
         self.fk2 = nn.Linear(170, 130, bias=False)
         self.fk3 = nn.Linear(130, 100, bias=False)
         self.fk4 = nn.Linear(100, 70, bias=False)
         self.fk5 = nn.Linear(70, dim_out, bias=False)
 
-        # -- learning params
+        # -- plasticity params
         self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.a_fwd = nn.Parameter(torch.tensor(args.a).float())
@@ -49,16 +57,20 @@ class MyModel(nn.Module):
         self.i_fwd = nn.Parameter(torch.tensor(args.i).float())
         self.j_fwd = nn.Parameter(torch.tensor(args.i).float())
 
-        # -- non-linearity
+        # -- activation function
         self.Beta = 10
         self.sopl = nn.Softplus(beta=self.Beta)
 
-        # -- learnable params
+        # -- meta-params
         self.params_fwd = nn.ParameterList()
         self.params_fbk = nn.ParameterList()
 
     def forward(self, x):
-
+        """
+            performs forward pass of information for the classification network.
+        :param x: input images,
+        :return: input, activations across network layers, and predicted output.
+        """
         y0 = x.squeeze(1)
 
         y1 = self.sopl(self.fc1(y0))
