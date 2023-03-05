@@ -1,0 +1,11 @@
+data/*
+Test_pytorch.py
+results/*
+.DS_Store
+.idea/*
+__pycache__/*
+*png
+model_torchviz
+*.o*
+gpu_test.py
+plots.py
