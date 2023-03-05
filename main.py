@@ -1,3 +1,10 @@
+"""
+PyTorch implementation for meta-learning plasticity rules (v1.0)
+
+Author: Navid Shervani-Tabar
+Date : March 5, 2023, 18:44:17
+"""
+
 import os
 import torch
 import warnings
@@ -21,9 +28,9 @@ class MyModel(nn.Module):
         Classifier model
 
     Defines the layers and parameters of
-        1) the classification network,
-        2) feedback alignment model, and
-        3) the plasticity meta-parameters.
+    1) the classification network,
+    2) feedback alignment model, and
+    3) the plasticity meta-parameters.
     """
     def __init__(self, args):
         super(MyModel, self).__init__()
@@ -68,6 +75,7 @@ class MyModel(nn.Module):
     def forward(self, x):
         """
             performs forward pass of information for the classification network.
+
         :param x: input images,
         :return: input, activations across network layers, and predicted output.
         """
@@ -82,6 +90,9 @@ class MyModel(nn.Module):
 
 
 class MetaLearner:
+    """
+        Meta-learning model
+    """
     def __init__(self, metatrain_dataset, args):
 
         # -- processor params
@@ -113,8 +124,13 @@ class MetaLearner:
 
     def load_model(self, args):
         """
-            Loads pretrained parameters for the convolutional layers and sets adaptation and meta training flags for
-            parameters.
+            Load classifier model
+
+        Loads the classifier network and sets the adaptation, meta-learning,
+        and grad computation flags for its variables.
+
+        :param args: input arguments to the model.
+        :return: model with flags "meta_fwd", "adapt", and "requires_grad" set for its parameters
         """
         # -- init model
         model = MyModel(args)
@@ -146,7 +162,17 @@ class MetaLearner:
 
     @staticmethod
     def weights_init(m):
+        """
+            Initialize weight matrices.
 
+        Takes weight matrices and fills them according to Xavier initialization method (*).
+        * Glorot, Xavier, and Yoshua Bengio. "Understanding the difficulty of training
+        deep feedforward neural networks." In Proceedings of the thirteenth international
+        conference on artificial intelligence and statistics, pp. 249-256. JMLR Workshop
+        and Conference Proceedings, 2010.
+
+        :param m: weight matrices
+        """
         classname = m.__class__.__name__
         if classname.find('Linear') != -1:
 
@@ -159,9 +185,20 @@ class MetaLearner:
                 m.bias.data.uniform_(-init_range, init_range)
 
     def reinitialize(self):
+        """
+            Construct module parameters.
 
+        This function initializes and clones the model parameters, creating a
+        separate copy of the data in new memory. This duplication enables us
+        to modify the parameters using inplace operations, which allows us to
+        update the parameters with a customized meta-learned optimizer.
+
+        :return: module parameters
+        """
+        # -- initialize weights
         self.model.apply(self.weights_init)
 
+        # -- enforce symmetric feedbacks when backprop is training
         if self.fbk == 'sym':
             self.model.fk1.weight.data = self.model.fc1.weight.data
             self.model.fk2.weight.data = self.model.fc2.weight.data
@@ -169,7 +206,10 @@ class MetaLearner:
             self.model.fk4.weight.data = self.model.fc4.weight.data
             self.model.fk5.weight.data = self.model.fc5.weight.data
 
+        # -- clone module parameters
         params = {key: val.clone() for key, val in dict(self.model.named_parameters()).items() if '.' in key}
+
+        # -- set adaptation flags for cloned parameters
         for key in params:
             params[key].adapt = dict(self.model.named_parameters())[key].adapt
 
@@ -177,7 +217,7 @@ class MetaLearner:
 
     def train(self):
         """
-            Model training.
+            Meta-training.
         """
         self.model.train()
         for eps, data in enumerate(self.metatrain_dataset):
@@ -275,7 +315,7 @@ class MetaLearner:
 
 
 def parse_args():
-    desc = "Pytorch implementation of meta-plasticity model."
+    desc = "Pytorch implementation of meta-learning model for discovering biologically plausible plasticity rules."
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('--gpu_mode', type=int, default=1, help='Accelerate the script using GPU.')
@@ -343,12 +383,16 @@ def check_args(args):
 
 
 def main():
+
+    # -- load arguments
     args = parse_args()
 
-    # -- meta-train
+    # -- load data
     dataset = EmnistDataset(K=args.K, Q=args.Q, dim=args.dim)
     sampler = RandomSampler(data_source=dataset, replacement=True, num_samples=args.episodes * args.M)
     metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
+
+    # -- meta-train
     metaplasticity_model = MetaLearner(metatrain_dataset, args)
     metaplasticity_model.train()
 
