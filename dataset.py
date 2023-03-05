@@ -12,91 +12,6 @@ from torch.utils.data import Dataset
 import numpy as np
 
 
-class FashionMNISTDataset(Dataset):
-    def __init__(self, K, Q, dim):
-
-        self.fashionmnist_dir = './data/fashionmnist/'
-
-        # todo: fix download issue
-
-        self.K = K
-        self.Q = Q
-
-        self.char_path = [folder for folder, folders, _ in os.walk(self.fashionmnist_dir) if not folders]
-        self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
-
-    def write_to_file(self):
-        n_class = 10
-
-        # -- read images and labels
-        with open(self.fashionmnist_dir + 't10k-images-idx3-ubyte', 'rb') as f:
-            f.read(4)
-            image_count = int.from_bytes(f.read(4), 'big')
-            height = int.from_bytes(f.read(4), 'big')
-            width = int.from_bytes(f.read(4), 'big')
-            images = np.frombuffer(f.read(), dtype=np.uint8).reshape((image_count, height, width))  # fixme: rotate?
-
-        with open(self.fashionmnist_dir + 't10k-labels-idx1-ubyte', 'rb') as f:
-            f.read(4)
-            label_count = int.from_bytes(f.read(4), 'big')
-            labels = np.frombuffer(f.read(), dtype=np.uint8)
-
-        assert (image_count == label_count)
-
-        # -- write images
-        for i in range(n_class):
-            os.mkdir(self.fashionmnist_dir + f'character{i + 1:02d}')
-
-        char_path = sorted([folder for folder, folders, _ in os.walk(self.fashionmnist_dir) if not folders])
-
-        label_counter = np.ones(n_class, dtype=int)
-        for i in range(label_count):
-            im = Image.fromarray(images[i])
-            im.save(char_path[labels[i]] + f'/{labels[i] + 1:02d}_{label_counter[labels[i]]:04d}.png')
-
-            label_counter[labels[i]] += 1
-
-    def __len__(self):
-        return len(self.char_path)
-
-    def __getitem__(self, idx):
-
-        img = []
-        for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
-            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
-
-        img = torch.cat(img)
-        idx_vec = idx * torch.ones_like(torch.empty(1000), dtype=int)
-
-        return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
-
-
-class MNISTDataset(Dataset):
-    def __init__(self, K, Q, dim):
-
-        self.mnist_dir = './data/MNIST/'
-
-        self.K = K
-        self.Q = Q
-
-        self.char_path = [folder for folder, folders, _ in os.walk(self.mnist_dir) if not folders]
-        self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
-
-    def __len__(self):
-        return len(self.char_path)
-
-    def __getitem__(self, idx):
-
-        img = []
-        for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
-            img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
-
-        img = torch.cat(img)
-        idx_vec = idx * torch.ones_like(torch.empty(890), dtype=int)
-
-        return img[:self.K], idx_vec[:self.K], img[self.K:self.K + self.Q], idx_vec[self.K:self.K + self.Q]
-
-
 class EmnistDataset(Dataset):
     def __init__(self, K, Q, dim):
         try:
@@ -160,7 +75,7 @@ class EmnistDataset(Dataset):
             image_count = int.from_bytes(f.read(4), 'big')
             height = int.from_bytes(f.read(4), 'big')
             width = int.from_bytes(f.read(4), 'big')
-            images = np.frombuffer(f.read(), dtype=np.uint8).reshape((image_count, height, width))  # fixme: rotate?
+            images = np.frombuffer(f.read(), dtype=np.uint8).reshape((image_count, height, width))
 
         with open(self.emnist_dir + 'emnist-balanced-test-labels-idx1-ubyte', 'rb') as f:
             f.read(3)
@@ -188,7 +103,7 @@ class EmnistDataset(Dataset):
     def __getitem__(self, idx):
 
         img = []
-        for img_ in os.listdir(self.char_path[idx]):  # fixme: sort?
+        for img_ in os.listdir(self.char_path[idx]):
             img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
 
         img = torch.cat(img)
@@ -221,4 +136,3 @@ class DataProcess:
             y_trn = y_trn[perm]
 
         return x_trn, y_trn, x_qry, y_qry
-
