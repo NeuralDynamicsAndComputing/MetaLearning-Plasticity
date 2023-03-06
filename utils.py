@@ -100,6 +100,8 @@ class Plot:
 
         plt.legend()
         plt.title('Meta Angles')
+        plt.ylim([0, 120])
+        plt.plot(np.array(range(len(z))) + int((self.period - 1) / 2), 90. * np.ones(len(z)), '--', c='gray')
         plt.savefig(self.res_dir + '/meta_angle', bbox_inches='tight')
         plt.close()
 
