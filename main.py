@@ -64,17 +64,12 @@ class MyModel(nn.Module):
         self.fk4 = nn.Linear(100, 70, bias=False)
         self.fk5 = nn.Linear(70, dim_out, bias=False)
 
-        # -- plasticity params
+        # -- plasticity meta-params
         self.a_fwd = nn.Parameter(torch.tensor(args.a).float())
-        self.b_fwd = nn.Parameter(torch.tensor(args.b).float())
-        self.c_fwd = nn.Parameter(torch.tensor(args.c).float())
-        self.d_fwd = nn.Parameter(torch.tensor(args.d).float())
-        self.e_fwd = nn.Parameter(torch.tensor(args.e).float())
-        self.f_fwd = nn.Parameter(torch.tensor(args.f).float())
-        self.g_fwd = nn.Parameter(torch.tensor(args.g).float())
-        self.h_fwd = nn.Parameter(torch.tensor(args.h).float())
-        self.i_fwd = nn.Parameter(torch.tensor(args.i).float())
-        self.j_fwd = nn.Parameter(torch.tensor(args.i).float())
+        self.b_fwd = nn.Parameter(torch.tensor(0.).float())
+        self.c_fwd = nn.Parameter(torch.tensor(0.).float())
+        self.d_fwd = nn.Parameter(torch.tensor(0.).float())
+        self.e_fwd = nn.Parameter(torch.tensor(0.).float())
 
         # -- activation function
         self.Beta = 10
@@ -322,15 +317,7 @@ def parse_args():
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
     parser.add_argument('--lamb', type=float, default=2.1, help='.')
     parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
-    parser.add_argument('--a', type=float, default=5e-3, help='.')
-    parser.add_argument('--b', type=float, default=0., help='.')
-    parser.add_argument('--c', type=float, default=0., help='.')
-    parser.add_argument('--d', type=float, default=0., help='.')
-    parser.add_argument('--e', type=float, default=0., help='.')
-    parser.add_argument('--f', type=float, default=0., help='.')
-    parser.add_argument('--g', type=float, default=0., help='.')
-    parser.add_argument('--h', type=float, default=0., help='.')
-    parser.add_argument('--i', type=float, default=0., help='.')
+    parser.add_argument('--a', type=float, default=1e-3, help='.')
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
