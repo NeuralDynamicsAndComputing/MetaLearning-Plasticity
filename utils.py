@@ -9,8 +9,7 @@ from torch.nn import functional as F
 
 
 class Plot:
-    def __init__(self, res_dir, adpt_idx=[0, 10, 400, 1000, 1100, 1200, 2900, 4900]):
-        self.adpt_idx = adpt_idx
+    def __init__(self, res_dir, meta_param_size):  # todo: pass period as argument
         self.res_dir = res_dir
 
     def meta_accuracy(self):
@@ -72,50 +71,11 @@ class Plot:
         plt.savefig(self.res_dir + '/meta_params', bbox_inches='tight')
         plt.close()
 
-    def adapt_accuracy(self, filename='/acc.txt', savename='/adapt_accuracy', idx_plot=None):
-        """
-            adaptation accuracy
-        """
 
-        y = np.nan_to_num(np.loadtxt(self.res_dir + filename, ndmin=2))
-
-        if idx_plot is not None:
-            self.adpt_idx = idx_plot
-
-        for idx in self.adpt_idx:
-            try:
-                plt.plot(np.array(range(y.shape[1])), y[idx])
-            except IndexError:
-                pass
-
-        plt.ylim([0, 1])
-        plt.legend(self.adpt_idx)
-
-        plt.title('Adaptation loss')
-        plt.savefig(self.res_dir + savename, bbox_inches='tight')
         plt.close()
 
-    def adapt_loss(self, filename='/loss.txt', savename='/adapt_loss', idx_plot=None):
         """
-            adaptation loss
-        """
-        y = np.nan_to_num(np.loadtxt(self.res_dir + filename, ndmin=2))
 
-        if idx_plot is not None:
-            self.adpt_idx = idx_plot
-
-        for idx in self.adpt_idx:
-            try:
-                plt.plot(np.array(range(y.shape[1])), y[idx])
-            except IndexError:
-                pass
-
-        plt.ylim([0, 5])
-        plt.legend(self.adpt_idx)
-
-        plt.title('Adaptation loss')
-        plt.savefig(self.res_dir + savename, bbox_inches='tight')
-        plt.close()
 
     def meta_angles(self):
         """
@@ -148,8 +108,6 @@ class Plot:
 
         self.meta_accuracy()
         self.meta_parameters()
-        self.adapt_accuracy()
-        self.adapt_loss()
         self.meta_angles()
         self.meta_loss()
 
