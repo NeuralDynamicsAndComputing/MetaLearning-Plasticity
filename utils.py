@@ -1,4 +1,3 @@
-import os
 import re
 import torch
 
@@ -99,8 +98,7 @@ class Plot:
 
         :return: None
         """
-        # fixme: read 'vec' and use for plotting and legend
-        # -- read meta params
+        # -- read meta-params
         with open(self.res_dir + '/params.txt', 'r') as f:
             strings = re.findall(r'(-?\d+\.\d+|nan)', f.read())
 
