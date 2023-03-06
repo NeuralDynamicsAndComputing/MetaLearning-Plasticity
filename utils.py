@@ -9,7 +9,13 @@ from torch.nn import functional as F
 
 
 class Plot:
-    def __init__(self, res_dir, meta_param_size):  # todo: pass period as argument
+    """
+        Plot object.
+
+    This class contains functions for reading, processing, and plotting
+    results of the meta-training.
+    """
+    def __init__(self, res_dir, meta_param_size, window_size=11):
         """
             Initialize an instance of the Plot class.
 
@@ -20,10 +26,11 @@ class Plot:
         - self.param_len: an integer representing the size of the meta-parameters
             plus two (for loss and accuracy).
 
-        The function takes in two parameters:
-        :param res_dir: a string representing the path to the directory where
+        The function takes in three parameters:
+        :param res_dir: (str) a string representing the path to the directory where
             results will be saved.
-        :param meta_param_size: an integer representing the size of the meta-parameters.
+        :param meta_param_size: (int) size of the meta-parameters.
+        :param window_size: (int) size of the moving average window.
         """
         self.res_dir = res_dir
         self.period = 11
@@ -41,10 +48,10 @@ class Plot:
         Finally, it divides the result by the window size to obtain the moving
         average vector.
 
-        :param vector: input data,
-        :param period: window size,
-        :return: a vector of moving average values computed using the input data
-            and window size
+        :param vector: (numpy.ndarray) input data,
+        :param period: (int) window size,
+        :return: numpy.ndarray: a vector of moving average values computed using
+            the input data and window size
         """
         ret = np.cumsum(vector, dtype=float)
         ret[period:] = ret[period:] - ret[:-period]
@@ -179,7 +186,6 @@ class Plot:
         :param kwargs: any keyword arguments.
         :return: None
         """
-
         self.meta_accuracy()
         self.meta_parameters()
         self.meta_angles()
@@ -190,8 +196,8 @@ def log(data, filename):
     """
         Save data to a file.
 
-    :param data: data to be saved,
-    :param filename: path to the file.
+    :param data: (list) data to be saved,
+    :param filename: (str) path to the file.
     """
     with open(filename, 'a') as f:
         np.savetxt(f, np.array(data), newline=' ', fmt='%0.6f')
@@ -202,7 +208,7 @@ def normalize_vec(vector):
     """
         Normalize input vector.
 
-    :param vector: input vector,
+    :param vector: (torch.Tensor) input vector,
     :return: normalized vector.
     """
     return vector / torch.linalg.norm(vector)
@@ -212,8 +218,8 @@ def measure_angle(v1, v2):
     """
         Compute the angle between two vectors.
 
-    :param v1: the first vector,
-    :param v2: the second vector,
+    :param v1: (torch.Tensor) the first vector,
+    :param v2: (torch.Tensor) the second vector,
     :return: the angle in degrees between the two vectors.
     """
     # -- normalize
@@ -230,8 +236,8 @@ def accuracy(logits, label):
     The function computes the accuracy of the predicted logits compared to the
     ground truth labels.
 
-    :param logits: predicted logits,
-    :param label: ground truth labels,
+    :param logits: (torch.Tensor) predicted logits,
+    :param label: (torch.Tensor) ground truth labels,
     :return: accuracy of the predicted logits.
     """
     # -- obtain predicted class labels
@@ -248,13 +254,13 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
     orthonormality errors, angle between modulator vectors, and accuracy. These
     statistics are then logged to output files.
 
-    :param logits: logits tensor,
-    :param params: model parameters (weights),
-    :param label: ground truth label tensor,
-    :param y: activations tensor,
-    :param Beta: smoothness coefficient for the activation function,
-    :param res_dir: output directory path for the log files.
-    :return: computed accuracy value.
+    :param logits: (torch.Tensor) logits tensor,
+    :param params: (dict) model parameters (weights),
+    :param label: (torch.Tensor) ground truth label tensor,
+    :param y: (tuple) tuple of activation tensors,
+    :param Beta: (int) smoothness coefficient for the activation function,
+    :param res_dir: (str) output directory path for the log files.
+    :return: float: computed accuracy value.
     """
     with torch.no_grad():
         # -- modulatory signal

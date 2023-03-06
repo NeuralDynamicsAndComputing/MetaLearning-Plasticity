@@ -31,9 +31,9 @@ class EmnistDataset(Dataset):
         and the dimensions of the images to be loaded, respectively. It also sets the
         path to the images and defines the transformation to be applied to the images.
 
-        :param K (int): integer value representing the number of training data per class,
-        :param Q (int): integer value representing the number of query data per class,
-        :param dim (int): integer value representing the dimension size of the images.
+        :param K: (int) integer value representing the number of training data per class,
+        :param Q: (int) integer value representing the number of query data per class,
+        :param dim: (int) integer value representing the dimension size of the images.
         """
         try:
             # -- create directory
@@ -83,8 +83,8 @@ class EmnistDataset(Dataset):
         """
             A static method to download a file from a URL and save it to a local file.
 
-        :param url (str): A string representing the URL from which to download the file,
-        :param filename (str): A string representing the name of the local file to save
+        :param url: (str) A string representing the URL from which to download the file,
+        :param filename: (str) A string representing the name of the local file to save
             the downloaded data to.
         :return: None
         """
@@ -139,7 +139,7 @@ class EmnistDataset(Dataset):
         """
             Get the length of the dataset.
 
-        :return: the length of the dataset, i.e., the number of classes in the
+        :return: int: the length of the dataset, i.e., the number of classes in the
             dataset
         """
         return len(self.char_path)
@@ -157,7 +157,7 @@ class EmnistDataset(Dataset):
         specified at initialization. The indices corresponding to the images are
         also returned in tensors of size K and Q, respectively.
 
-        :param idx (int): Index of the character folder from which images are to be retrieved.
+        :param idx: (int) Index of the character folder from which images are to be retrieved.
         :return: tuple: A tuple (img_K, idx_vec_K, img_Q, idx_vec_Q) containing the following tensors:
             - img_K (torch.Tensor): A tensor of K images from the character folder at idx
                 as training data.
@@ -195,11 +195,11 @@ class DataProcess:
         """
             Initialize the DataProcess object.
 
-        :param K (int): training data set size per class,
-        :param Q (int): query data set size per class,
-        :param dim (int): image dimension,
-        :param device (str): The processing device to use. Default is 'cpu',
-        :param iid (bool): shuffling flag. Default is True.
+        :param K: (int) training data set size per class,
+        :param Q: (int) query data set size per class,
+        :param dim: (int) image dimension,
+        :param device: (str) The processing device to use. Default is 'cpu',
+        :param iid: (bool) shuffling flag. Default is True.
         """
         self.K = K
         self.Q = Q
@@ -211,9 +211,9 @@ class DataProcess:
         """
             Processing meta-training data.
 
-        :param data (tuple): A tuple of training and query data and the
+        :param data: (tuple) A tuple of training and query data and the
             corresponding indices.
-        :param M (int): The number of classes.
+        :param M: (int) The number of classes.
         :return: tuple: A tuple of processed training and query data and
             the corresponding indices.
         """
