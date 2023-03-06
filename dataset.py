@@ -14,11 +14,27 @@ import numpy as np
 
 class EmnistDataset(Dataset):
     """
-        EMNIST Dataset function.
+        EMNIST Dataset class.
 
-    Constructs training and query sets for meta-training.
+    Constructs training and query sets for meta-training. Note that rather
+    than a single image and the corresponding label, each data point
+    represents samples from a class of images, containing training and query
+    data from that category.
     """
     def __init__(self, K, Q, dim):
+        """
+            Initialize the EmnistDataset class.
+
+        The method first downloads and preprocesses the EMNIST dataset, creating
+        directories and files necessary for later use. It then sets the values for
+        K, Q, and dim, which define the number of training data, the number of queries,
+        and the dimensions of the images to be loaded, respectively. It also sets the
+        path to the images and defines the transformation to be applied to the images.
+
+        :param K (int): integer value representing the number of training data per class,
+        :param Q (int): integer value representing the number of query data per class,
+        :param dim (int): integer value representing the dimension size of the images.
+        """
         try:
             # -- create directory
             s_dir = os.getcwd()
@@ -64,6 +80,14 @@ class EmnistDataset(Dataset):
 
     @staticmethod
     def download(url, filename):
+        """
+            A static method to download a file from a URL and save it to a local file.
+
+        :param url (str): A string representing the URL from which to download the file,
+        :param filename (str): A string representing the name of the local file to save
+            the downloaded data to.
+        :return: None
+        """
         res = requests.get(url, stream=False)
         with open(filename, 'wb') as f:
             for chunk in res.iter_content(chunk_size=1024):
@@ -71,9 +95,18 @@ class EmnistDataset(Dataset):
                     f.write(chunk)
 
     def write_to_file(self):
+        """
+            Write EMNIST images to files.
+
+        The function reads the EMNIST test images and labels from binary files and
+        writes them to files. Each image is saved to a file under a directory
+        corresponding to its label.
+
+        :return: None.
+        """
         n_class = 47
 
-        # -- read images and labels
+        # -- read images
         with open(self.emnist_dir + 'emnist-balanced-test-images-idx3-ubyte', 'rb') as f:
             f.read(3)
             image_count = int.from_bytes(f.read(4), 'big')
@@ -81,6 +114,7 @@ class EmnistDataset(Dataset):
             width = int.from_bytes(f.read(4), 'big')
             images = np.frombuffer(f.read(), dtype=np.uint8).reshape((image_count, height, width))
 
+        # -- read labels
         with open(self.emnist_dir + 'emnist-balanced-test-labels-idx1-ubyte', 'rb') as f:
             f.read(3)
             label_count = int.from_bytes(f.read(4), 'big')
@@ -102,10 +136,38 @@ class EmnistDataset(Dataset):
             label_counter[labels[i]] += 1
 
     def __len__(self):
+        """
+            Get the length of the dataset.
+
+        :return: the length of the dataset, i.e., the number of classes in the
+            dataset
+        """
         return len(self.char_path)
 
     def __getitem__(self, idx):
+        """
+            Return a tuple of tensors containing training and query images and
+            corresponding labels for a given index.
 
+        The images are loaded from the character folder at the given index. Each
+        image is converted to grayscale and resized to the specified dimension
+        using `torchvision.transforms.Resize` and `torchvision.transforms.ToTensor`.
+        The returned tuples contain tensors of K and Q images, where K is the training
+        data size per class and Q is the query data size per class. Both K and Q are
+        specified at initialization. The indices corresponding to the images are
+        also returned in tensors of size K and Q, respectively.
+
+        :param idx (int): Index of the character folder from which images are to be retrieved.
+        :return: tuple: A tuple (img_K, idx_vec_K, img_Q, idx_vec_Q) containing the following tensors:
+            - img_K (torch.Tensor): A tensor of K images from the character folder at idx
+                as training data.
+            - idx_vec_K (torch.Tensor): A tensor of K indices corresponding to the images
+                in img_K.
+            - img_Q (torch.Tensor): A tensor of Q images from the character folder at idx
+                as query data.
+            - idx_vec_Q (torch.Tensor): A tensor of Q indices corresponding to the images
+                in img_Q.
+        """
         img = []
         for img_ in os.listdir(self.char_path[idx]):
             img.append(self.transform(Image.open(self.char_path[idx] + '/' + img_, mode='r').convert('L')))
@@ -131,13 +193,13 @@ class DataProcess:
     """
     def __init__(self, K, Q, dim, device='cpu', iid=True):
         """
-            Initialize data processor.
+            Initialize the DataProcess object.
 
-        :param K: training data set size (per class),
-        :param Q: query data set size (per class),
-        :param dim: image dimension,
-        :param device: processor device,
-        :param iid: shuffling flag.
+        :param K (int): training data set size per class,
+        :param Q (int): query data set size per class,
+        :param dim (int): image dimension,
+        :param device (str): The processing device to use. Default is 'cpu',
+        :param iid (bool): shuffling flag. Default is True.
         """
         self.K = K
         self.Q = Q
@@ -149,9 +211,11 @@ class DataProcess:
         """
             Processing meta-training data.
 
-        :param data: training and query data,
-        :param M: number of classes,
-        :return: processed data.
+        :param data (tuple): A tuple of training and query data and the
+            corresponding indices.
+        :param M (int): The number of classes.
+        :return: tuple: A tuple of processed training and query data and
+            the corresponding indices.
         """
 
         # -- load data
