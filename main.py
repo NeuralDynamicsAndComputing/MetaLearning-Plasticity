@@ -302,6 +302,7 @@ def parse_args():
     desc = "Pytorch implementation of meta-learning model for discovering biologically plausible plasticity rules."
     parser = argparse.ArgumentParser(description=desc)
 
+    # -- processor params
     parser.add_argument('--gpu_mode', type=int, default=1, help='Accelerate the script using GPU.')
     parser.add_argument('--seed', type=int, default=1, help='.')
 
@@ -347,7 +348,20 @@ def parse_args():
 
 
 def check_args(args):
-    # todo: Implement argument check.
+    """
+        Check validity of the input arguments.
+
+    This function checks validity of the input arguments. It also stores the
+    settings by writing them to a file named `args.txt` in the `res_dir`
+    directory specified in the input arguments.
+
+    :param args: (argparse.Namespace) The command-line arguments.
+    :return: (argparse.Namespace) The validated input arguments.
+    """
+    # -- GPU check
+    # If the gpu_mode argument is set to True but no GPUs are
+    # available on the device, a message is printed indicating
+    # that the program will run on the CPU instead.
     if bool(args.gpu_mode) and not torch.cuda.is_available():
         print('No GPUs on this device! Running on CPU.')
 
