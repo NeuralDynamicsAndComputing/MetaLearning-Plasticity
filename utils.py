@@ -11,14 +11,39 @@ from torch.nn import functional as F
 class Plot:
     def __init__(self, res_dir, meta_param_size):  # todo: pass period as argument
         self.res_dir = res_dir
+        self.period = 11
+    def comp_moving_avg(self, vector, period):
+        """
+            Compute moving average.
+
+        The function computes a moving average for the input data vector over
+        a given window size. It does so by first calculating the cumulative sum
+        of the data vector using numpy's cumsum function. It then subtracts the
+        cumulative sum of the data vector up to (period - 1)th index from the
+        cumulative sum of the data vector starting from the period-th index.
+        Finally, it divides the result by the window size to obtain the moving
+        average vector.
+
+        :param vector: input data,
+        :param period: window size,
+        :return: a vector of moving average values computed using the input data
+            and window size
+        """
+        ret = np.cumsum(vector, dtype=float)
+        ret[period:] = ret[period:] - ret[:-period]
+
+        return ret[period - 1:] / period
 
     def meta_accuracy(self):
         """
             meta accuracy
         """
+        # -- compute moving average
+        z = self.comp_moving_avg(np.nan_to_num(np.loadtxt(self.res_dir + '/acc_meta.txt')), self.period)
 
-        y = np.nan_to_num(np.loadtxt(self.res_dir + '/acc_meta.txt'))
-        plt.plot(np.array(range(len(y))), y)
+        # -- plot
+        plt.plot(np.array(range(len(z))) + int((self.period - 1) / 2), z)
+
         plt.title('Meta Accuracy')
         plt.ylim([0, 1])
         # plt.xlim([0, self.N])
@@ -81,13 +106,17 @@ class Plot:
         """
             meta angles
         """
+        # -- read angles
+        y = np.nan_to_num(np.loadtxt(self.res_dir + '/e_ang_meta.txt'))
 
-        y = np.nan_to_num(np.loadtxt(self.res_dir + '/ang_meta.txt'))
+        for idx in range(1, y.shape[1] - 1):
+            # -- compute moving average
+            z = self.comp_moving_avg(y[:, idx], self.period)
 
-        for idx in range(y.shape[1] - 1):
-            plt.plot(range(len(y)), y[:, idx])
-            plt.legend(['1', '2', '3', '4', '5', '6'])
+            # -- plot
+            plt.plot(np.array(range(len(z))) + int((self.period - 1) / 2), z, label=r'$\alpha_{}$'.format(idx))
 
+        plt.legend()
         plt.title('Meta Angles')
         plt.savefig(self.res_dir + '/meta_angle', bbox_inches='tight')
         plt.close()
@@ -96,9 +125,12 @@ class Plot:
         """
             meta loss
         """
+        # -- compute moving average
+        z = self.comp_moving_avg(np.nan_to_num(np.loadtxt(self.res_dir + '/loss_meta.txt')), self.period)
 
-        y = np.nan_to_num(np.loadtxt(self.res_dir + '/loss_meta.txt'))
-        plt.plot(np.array(range(len(y))), y)
+        # -- plot
+        plt.plot(np.array(range(len(z))) + int((self.period - 1) / 2), z)#, label=label, color=self.color)
+
         plt.title('Meta Loss')
         plt.ylim([0, 5])
         plt.savefig(self.res_dir + '/meta_loss', bbox_inches='tight')
