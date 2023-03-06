@@ -147,7 +147,7 @@ class MetaLearner:
         and grad computation flags for its variables. For module naming conventions
         see `__init__` method from `MyModel` class.
 
-        :param args: input arguments to the model.
+        :param args: (argparse.Namespace) The command-line arguments.
         :return: model with flags "meta_fwd", "adapt", and "requires_grad" set for
             its parameters
         """
@@ -299,6 +299,18 @@ class MetaLearner:
 
 
 def parse_args():
+    """
+        Parses the input arguments for the meta-learning model.
+
+    The function creates an argument parser with various input parameters for
+    the model. These parameters include processor, data, meta-training, log,
+    and model parameters. After parsing the input arguments, the function sets
+    up the storage and GPU settings and returns the validated input arguments
+    using the check_args() function.
+
+    :return: argparse.Namespace: The validated input arguments for the
+    meta-learning model.
+    """
     desc = "Pytorch implementation of meta-learning model for discovering biologically plausible plasticity rules."
     parser = argparse.ArgumentParser(description=desc)
 
