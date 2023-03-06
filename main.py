@@ -137,7 +137,7 @@ class MetaLearner:
 
         # -- log params
         self.res_dir = args.res_dir
-        self.plot = Plot(self.res_dir, len(self.Theta))  # todo: pass window size as argument
+        self.plot = Plot(self.res_dir, len(self.Theta), args.avg_window)
 
     def load_model(self, args):
         """
@@ -321,6 +321,8 @@ def parse_args():
 
     # -- log params
     parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
+    parser.add_argument('--avg_window', type=int, default=10, help='The size of moving average window in the '
+                                                                   'output figures.')
 
     # -- model params
     parser.add_argument('--vec', nargs='*', default=[], help='Learning rule terms.')
