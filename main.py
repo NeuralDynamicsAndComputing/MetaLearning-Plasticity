@@ -316,31 +316,36 @@ def parse_args():
 
     # -- processor params
     parser.add_argument('--gpu_mode', type=int, default=1, help='Accelerate the script using GPU.')
-    parser.add_argument('--seed', type=int, default=1, help='.')
+    parser.add_argument('--seed', type=int, default=1, help='Random seed.')
 
     # -- data params
-    parser.add_argument('--database', type=str, default='emnist', help='The database.')
-    parser.add_argument('--dim', type=int, default=28, help='The dimension of the training data.')
-    parser.add_argument('--test_name', type=str, default='', help='Test folder name.')
+    parser.add_argument('--database', type=str, default='emnist', help='Meta-training database.')
+    parser.add_argument('--dim', type=int, default=28, help='Dimension of the training data.')
+    parser.add_argument('--test_name', type=str, default='',
+                        help='Name of the folder at the secondary level in the hierarchy of the results directory '
+                             'tree.')
 
     # -- meta-training params
-    parser.add_argument('--episodes', type=int, default=10002, help='The number of training episodes.')
-    parser.add_argument('--K', type=int, default=50, help='The number of training datapoints per class.')
-    parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
-    parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lamb', type=float, default=2.1, help='.')
-    parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
-    parser.add_argument('--a', type=float, default=1e-3, help='.')
+    parser.add_argument('--episodes', type=int, default=600, help='Number of meta-training episodes.')
+    parser.add_argument('--K', type=int, default=50, help='Number of training data points per class.')
+    parser.add_argument('--Q', type=int, default=10, help='Number of query data points per class.')
+    parser.add_argument('--M', type=int, default=5, help='Number of classes per task.')
+    parser.add_argument('--lamb', type=float, default=0., help='Meta-loss regularization parameter.')
+    parser.add_argument('--lr_meta', type=float, default=1e-3, help='Meta-optimization learning rate.')
+    parser.add_argument('--a', type=float, default=1e-3,
+                        help='Initial learning rate for the pseudo-gradient term at episode 0.')
 
     # -- log params
-    parser.add_argument('--res', type=str, default='results', help='Path for storing the results.')
-    parser.add_argument('--avg_window', type=int, default=10, help='The size of moving average window in the '
-                                                                   'output figures.')
+    parser.add_argument('--res', type=str, default='results', help='Result directory.')
+    parser.add_argument('--avg_window', type=int, default=10,
+                        help='The size of moving average window used in the output figures.')
 
     # -- model params
-    parser.add_argument('--vec', nargs='*', default=[], help='Learning rule terms.')
+    parser.add_argument('--vec', nargs='*', default=[],
+                        help='Index vector specifying the plasticity terms to be used for model training in '
+                             'adaptation.')
     parser.add_argument('--fbk', type=str, default='sym',
-                        help='Feedback matrix type: 1) sym = Symmetric matrix; 2) fix = Fixed random matrix.')
+                        help='Feedback connection type: 1) sym = Symmetric feedback; 2) fix = Fixed random feedback.')
 
     args = parser.parse_args()
 
