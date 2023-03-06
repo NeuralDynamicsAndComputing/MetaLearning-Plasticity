@@ -14,18 +14,18 @@ def plasticity_rule(activation, e, params, feedback, Theta, vec, fbk):
     'torch.nn.utils._stateless' to replace the module parameters with the cloned
     copy.
 
-    :param activation: model activations,
-    :param e: modulatory signals,
-    :param params: model parameters (weights),
-    :param feedback: feedback connections,
-    :param Theta: meta-learned plasticity coefficients,
-    :param vec: vector of plasticity rule indices. It determines which plasticity
-            rule is applied during the parameter update process.
-    :param fbk: the type of feedback matrix used in the model:
-            1) 'sym', which indicates that the feedback matrix is symmetric;
-            2) 'fix', which indicates that the feedback matrix is a fixed random matrix.)
+    :param activation: (list) model activations,
+    :param e: (list) modulatory signals,
+    :param params: (dict) model parameters (weights),
+    :param feedback: (dict) feedback connections,
+    :param Theta: (ParameterList) meta-learned plasticity coefficients,
+    :param vec: (list) vector of plasticity rule indices. It determines which
+        plasticity rule is applied during the parameter update process.
+    :param fbk: (str) the type of feedback matrix used in the model:
+        1) 'sym', which indicates that the feedback matrix is symmetric;
+        2) 'fix', which indicates that the feedback matrix is a fixed random matrix.)
+    :return: None.
     """
-
     """ update forward weights """
     i = 0
     for k, p in params.items():
@@ -58,45 +58,54 @@ def plasticity_rule(activation, e, params, feedback, Theta, vec, fbk):
 
 class my_optimizer:
     """
-        Optimizer.
+        Adaptation optimizer object.
 
-    The function is responsible for two main operations: computing modulatory signals
-    and applying an update rule. The modulatory signals are computed based on the
-    current state of the model (activations), and are used to adjust the model's
-    parameters. The update rule specifies how these adjustments are made.
+    The class is responsible for two main operations: computing modulatory
+    signals and applying an update rule. The modulatory signals are computed
+    based on the current state of the model (activations), and are used to
+    adjust the model's parameters. The update rule specifies how these
+    adjustments are made.
     """
     def __init__(self, update_rule, vec, fbk):
         """
             Initialize the optimizer
 
-        :param update_rule: weight update function,
-        :param vec: vector of plasticity rule indices. It determines which plasticity
-                rule is applied during the parameter update process.
-        :param fbk: the type of feedback matrix used in the model:
-                1) 'sym', which indicates that the feedback matrix is symmetric;
-                2) 'fix', which indicates that the feedback matrix is a fixed random matrix.)
+        :param update_rule: (function) weight update function,
+        :param vec: (list) vector of plasticity rule indices. It determines which plasticity
+            rule is applied during the parameter update process.
+        :param fbk: (str) the type of feedback matrix used in the model:
+            1) 'sym', which indicates that the feedback matrix is symmetric;
+            2) 'fix', which indicates that the feedback matrix is a fixed random matrix.)
         """
         self.update_rule = update_rule
         self.vec = vec
         self.fbk = fbk
 
     def __call__(self, params, logits, label, activation, Beta, Theta):
-
         """
-            One step update of the adaptation loop.
+            Adaptation loop update.
 
-        :param params: model parameters,
-        :param logits: unnormalized prediction values,
-        :param label: target class,
-        :param activation: vector of activations,
-        :param Beta: smoothness coefficient for non-linearity,
-        :param Theta: plasticity meta-parameters.
+        The following function is an implementation of one step update of the
+        model parameters in the adaptation loop. The function performs the
+        following operations:
+        1) Computes the modulatory signals using the signal from downstream layers,
+            feedback connections, and activations. instead of using pre-activations,
+            we use g'(z) = 1 - e^(-Beta*y).
+        2) Updates the model parameters using the update function.
+
+        :param params: (dict) model parameters,
+        :param logits: (torch.Tensor) unnormalized prediction values,
+        :param label: (torch.Tensor) target class,
+        :param activation: (tuple) vector of activations,
+        :param Beta: (int) smoothness coefficient for non-linearity,
+        :param Theta: (ParameterList) plasticity meta-parameters.
+        :return: None.
         """
         # -- error
         feedback = dict({k: v for k, v in params.items() if 'fk' in k})
         e = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
         for y, i in zip(reversed(activation), reversed(list(feedback))):
-            e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))  # note: g'(z) = 1 - e^(-Beta*y)
+            e.insert(0, torch.matmul(e[0], feedback[i]) * (1 - torch.exp(-Beta * y)))
 
         # -- weight update
         self.update_rule([*activation, F.softmax(logits, dim=1)], e, params, feedback, Theta, self.vec, self.fbk)
