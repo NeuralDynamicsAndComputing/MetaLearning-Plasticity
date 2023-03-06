@@ -25,9 +25,9 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 
 class MyModel(nn.Module):
     """
-        Classifier model
+        Classifier model.
 
-    Defines the layers and parameters of
+    This class contains definitions of the layers and parameters of
     1) the classification network,
     2) feedback alignment model, and
     3) the plasticity meta-parameters.
@@ -37,7 +37,13 @@ class MyModel(nn.Module):
             Initialize MyModel object.
 
         Initializes a neural network model with forward and feedback pathways,
-        plasticity meta-parameters, and activation function.
+        plasticity meta-parameters, and activation function. We have followed
+        a naming convention for the module names, which are defined as follows:
+        - 'fc': parameters that are updated during adaptation,
+        - 'fk': fixed parameters with `requires_grad=False`,
+        - 'fwd': meta-learned parameters.
+        These settings can be adjusted from the `load_model` method in the
+        `MetaLearner` class.
 
         :param args: (argparse.Namespace) The command-line arguments.
         """
@@ -84,11 +90,11 @@ class MyModel(nn.Module):
         The function takes in an input tensor x and performs forward propagation
         through the network. The output of each layer is passed through a Softplus
         activation function, except for the last layer which has no activation
-        function (softmax applied in the loss function).
+        function (softmax is applied in the loss function).
 
         :param x: (torch.Tensor) input images.
-        :return: tuple: a tuple containing the input, activations across network layers,
-            and predicted output.
+        :return: tuple: a tuple containing the input, activations across network
+            layers, and predicted output.
         """
         y0 = x.squeeze(1)
 
@@ -143,7 +149,8 @@ class MetaLearner:
             Load classifier model
 
         Loads the classifier network and sets the adaptation, meta-learning,
-        and grad computation flags for its variables.
+        and grad computation flags for its variables. For module naming conventions
+        see `__init__` method from `MyModel` class.
 
         :param args: input arguments to the model.
         :return: model with flags "meta_fwd", "adapt", and "requires_grad" set for
