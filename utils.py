@@ -12,6 +12,8 @@ class Plot:
     def __init__(self, res_dir, meta_param_size):  # todo: pass period as argument
         self.res_dir = res_dir
         self.period = 11
+        self.param_len = meta_param_size + 2
+
     def comp_moving_avg(self, vector, period):
         """
             Compute moving average.
@@ -59,44 +61,24 @@ class Plot:
         with open(self.res_dir + '/params.txt', 'r') as f:
             strings = re.findall(r'(-?\d+\.\d+|nan)', f.read())
 
-        y = np.nan_to_num(np.asarray([float(i) for i in strings])).reshape(-1, 21)
-        meta_param_lr_dr = y[:, 2:4]
-        meta_param_terms = y[:, 4:]
+        y = np.nan_to_num(np.asarray([float(i) for i in strings])).reshape(-1, self.param_len)
+        meta_param_lr = y[:, 2]
+        meta_param_terms = y[:, 3:]
 
         # -- plot meta params
-        my_legend = ['BP']
         cmap = plt.get_cmap("tab10")
 
-        # -- backprop term
-        plt.plot(range(len(y)), meta_param_lr_dr[:, 0], color=cmap(0))
+        # -- pseudo-grad term
+        plt.plot(range(len(y)), meta_param_lr, color=cmap(0), label=r'$\theta_0$')
 
-        # -- arbitrary and bio-inspired terms
-        for i in range(meta_param_terms.shape[1]):  # fixme: temp
-            plt.plot(range(len(y)), meta_param_terms[:, i], color=cmap(i))
+        # -- additional terms
+        for i in range(meta_param_terms.shape[1]):
+            plt.plot(range(len(y)), meta_param_terms[:, i], color=cmap(i+1), label=r'$\theta_{}$'.format(i+1))
 
-        # for idx, term in enumerate(re.findall(r'(\d+)', test_name)): # fixme: use 'vec' instead of 'test_name'
-        #     my_legend.append('Term {}'.format(int(term))) fixme
-        #
-        #     -- adjust meta param indices for arbitrary terms
-        #     if 'arb' in test_name: # fixme: use 'vec' instead of 'test_name'
-        #         plt.plot(range(len(y)), meta_param_terms[:, int(term)-1], color=cmap(idx+1))
-        #
-        #     # -- adjust meta param indices for bio-inspired terms
-        #     elif 'bio' in test_name:
-        #         plt.plot(range(len(y)), meta_param_terms[:, int(term)-8], color=cmap(idx+1))
-        #
-        #         # -- adjust meta param index for homeostatic term
-        #         if '12' in term:
-        #             plt.plot(range(len(y)), meta_param_terms[:, 5], color=cmap(idx+2))
-        #             my_legend.append('Term {}.b'.format(int(term)))
-
-        # plt.legend(my_legend)  fixme
+        # -- plot
+        plt.legend()
         plt.title('Meta parameters')
-        # plt.ylim([0, 1])
         plt.savefig(self.res_dir + '/meta_params', bbox_inches='tight')
-        plt.close()
-
-
         plt.close()
 
         """
