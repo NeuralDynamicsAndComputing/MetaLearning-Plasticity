@@ -3,7 +3,7 @@ import torch
 from torch.nn import functional as F
 
 
-def generic_rule(activation, e, params, feedback, Theta, vec, fbk):
+def plasticity_rule(activation, e, params, feedback, Theta, vec, fbk):
     """
         Pool of plasticity rules.
 
