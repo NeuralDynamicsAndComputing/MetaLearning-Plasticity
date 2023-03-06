@@ -39,7 +39,7 @@ def plasticity_rule(activation, e, params, feedback, Theta, vec, fbk):
                     p.update -= Theta[2] * torch.matmul(e[i + 1].T, e[i])
                 if '9' in vec:
                     # -- Oja's rule
-                    p.update -= Theta[9] * (torch.matmul(activation[i + 1].T, activation[i]) - torch.matmul(
+                    p.update += Theta[9] * (torch.matmul(activation[i + 1].T, activation[i]) - torch.matmul(
                         torch.matmul(activation[i + 1].T, activation[i + 1]), p))
 
                 params[k] = p + p.update
