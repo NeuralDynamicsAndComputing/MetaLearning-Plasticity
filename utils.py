@@ -33,7 +33,7 @@ class Plot:
         :param window_size: (int) size of the moving average window.
         """
         self.res_dir = res_dir
-        self.period = 11
+        self.period = window_size
         self.param_len = meta_param_size + 2
 
     def comp_moving_avg(self, vector, period):
