@@ -35,7 +35,8 @@ class Plot:
         self.period = window_size
         self.param_len = meta_param_size + 2
 
-    def comp_moving_avg(self, vector, period):
+    @staticmethod
+    def comp_moving_avg(vector, period):
         """
             Compute moving average.
 

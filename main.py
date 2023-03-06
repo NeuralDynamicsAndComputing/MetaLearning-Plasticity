@@ -33,6 +33,14 @@ class MyModel(nn.Module):
     3) the plasticity meta-parameters.
     """
     def __init__(self, args):
+        """
+            Initialize MyModel object.
+
+        Initializes a neural network model with forward and feedback pathways,
+        plasticity meta-parameters, and activation function.
+
+        :param args: (argparse.Namespace) The command-line arguments.
+        """
         super(MyModel, self).__init__()
 
         # -- forward pathway
@@ -74,10 +82,16 @@ class MyModel(nn.Module):
 
     def forward(self, x):
         """
-            performs forward pass of information for the classification network.
+            Performs forward pass of information for the classification network.
 
-        :param x: input images,
-        :return: input, activations across network layers, and predicted output.
+        The function takes in an input tensor x and performs forward propagation
+        through the network. The output of each layer is passed through a Softplus
+        activation function, except for the last layer which has no activation
+        function (softmax applied in the loss function).
+
+        :param x: (torch.Tensor) input images.
+        :return: tuple: a tuple containing the input, activations across network layers,
+            and predicted output.
         """
         y0 = x.squeeze(1)
 
@@ -91,10 +105,17 @@ class MyModel(nn.Module):
 
 class MetaLearner:
     """
-        Meta-learning model
+        Class for meta-learning algorithms.
+
+    The MetaLearner class is used to define meta-learning algorithm.
     """
     def __init__(self, metatrain_dataset, args):
+        """
+            Initialize the Meta-learner.
 
+        :param metatrain_dataset: (DataLoader) The meta-training dataset.
+        :param args: (argparse.Namespace) The command-line arguments.
+        """
         # -- processor params
         self.device = args.device
 
@@ -130,7 +151,8 @@ class MetaLearner:
         and grad computation flags for its variables.
 
         :param args: input arguments to the model.
-        :return: model with flags "meta_fwd", "adapt", and "requires_grad" set for its parameters
+        :return: model with flags "meta_fwd", "adapt", and "requires_grad" set for
+            its parameters
         """
         # -- init model
         model = MyModel(args)
@@ -165,13 +187,16 @@ class MetaLearner:
         """
             Initialize weight matrices.
 
-        Takes weight matrices and fills them according to Xavier initialization method (*).
+        The function initializes weight matrices by filling them with values based on
+        the Xavier initialization method proposed by Glorot et al. (2010). The method
+        scales the initial values of the weights based on the number of input and output
+        units to the layer.
         * Glorot, Xavier, and Yoshua Bengio. "Understanding the difficulty of training
         deep feedforward neural networks." In Proceedings of the thirteenth international
         conference on artificial intelligence and statistics, pp. 249-256. JMLR Workshop
         and Conference Proceedings, 2010.
 
-        :param m: weight matrices
+        :param m: modules in the model.
         """
         classname = m.__class__.__name__
         if classname.find('Linear') != -1:
@@ -186,14 +211,14 @@ class MetaLearner:
 
     def reinitialize(self):
         """
-            Construct module parameters.
+            Initialize module parameters.
 
-        This function initializes and clones the model parameters, creating a
-        separate copy of the data in new memory. This duplication enables us
-        to modify the parameters using inplace operations, which allows us to
-        update the parameters with a customized meta-learned optimizer.
+        Initializes and clones the model parameters, creating a separate copy
+        of the data in new memory. This duplication enables the modification
+        of the parameters using inplace operations, which allows updating the
+        parameters with a customized meta-learned optimizer.
 
-        :return: module parameters
+        :return: dict: module parameters
         """
         # -- initialize weights
         self.model.apply(self.weights_init)
@@ -217,7 +242,19 @@ class MetaLearner:
 
     def train(self):
         """
-            Meta-training.
+            Perform meta-training.
+
+        This function iterates over episodes to meta-train the model. At each
+        episode, it samples a task from the meta-training dataset, initializes
+        the model parameters, and clones them. The meta-training data for each
+        episode is processed and divided into training and query data. During
+        adaptation, the model is updated using `self.OptimAdpt` function, one
+        sample at a time, on the training data. In the meta-optimization loop,
+        the model is evaluated using the query data, and the plasticity
+        meta-parameters are then updated using the `self.OptimMeta` function.
+        Accuracy, loss, and other meta statistics are computed and logged.
+
+        :return: None
         """
         self.model.train()
         for eps, data in enumerate(self.metatrain_dataset):
@@ -343,7 +380,19 @@ def check_args(args):
 
 
 def main():
+    """
+        Main function for Meta-learning the plasticity rule.
 
+    This function serves as the entry point for meta-learning model training
+    and performs the following operations:
+    1) Loads and parses command-line arguments,
+    2) Loads custom EMNIST dataset using meta-training arguments (K, Q),
+    3) Creates tasks for meta-training using `RandomSampler` with specified
+        number of classes (M) and episodes,
+    4) Initializes and trains a MetaLearner object with the set of tasks.
+
+    :return: None
+    """
     # -- load arguments
     args = parse_args()
 
