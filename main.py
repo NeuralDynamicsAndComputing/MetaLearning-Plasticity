@@ -59,8 +59,6 @@ class MyModel(nn.Module):
         self.fk5 = nn.Linear(70, dim_out, bias=False)
 
         # -- plasticity params
-        self.alpha_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
-        self.beta_fbk = nn.Parameter(torch.rand(1) / 100 - 1)
         self.a_fwd = nn.Parameter(torch.tensor(args.a).float())
         self.b_fwd = nn.Parameter(torch.tensor(args.b).float())
         self.c_fwd = nn.Parameter(torch.tensor(args.c).float())
@@ -78,7 +76,6 @@ class MyModel(nn.Module):
 
         # -- meta-params
         self.params_fwd = nn.ParameterList()
-        self.params_fbk = nn.ParameterList()
 
     def forward(self, x):
         """
@@ -127,21 +124,19 @@ class MetaLearner:
         self.data_process = DataProcess(K=self.K, Q=args.Q, dim=args.dim, device=self.device)
 
         # -- model params
-        self.evl = args.evl
         self.model = self.load_model(args).to(self.device)
-        self.Theta = nn.ParameterList([*self.model.params_fwd, *self.model.params_fbk])
+        self.Theta = nn.ParameterList([*self.model.params_fwd])
         self.fbk = args.fbk
 
         # -- optimization params
         self.lamb = args.lamb
         self.loss_func = nn.CrossEntropyLoss()
         self.OptimAdpt = MyOptimizer(plasticity_rule, args.vec, args.fbk)
-        self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
-                                     {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
+        self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta}])
 
         # -- log params
         self.res_dir = args.res_dir
-        self.plot = Plot(self.res_dir)
+        self.plot = Plot(self.res_dir, len(self.Theta))  # todo: pass window size as argument
 
     def load_model(self, args):
         """
@@ -160,25 +155,15 @@ class MetaLearner:
         # -- learning flags
         for key, val in model.named_parameters():
             if 'fc' in key:
-                val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
+                val.meta_fwd, val.adapt = False, True
             elif 'fk' in key:
-                if self.evl:
-                    val.meta_fwd, val.meta_fbk, val.adapt = False, False, True
-                else:
-                    val.meta_fwd, val.meta_fbk, val.adapt, val.requires_grad = False, False, False, False
+                val.meta_fwd, val.adapt, val.requires_grad = False, False, False
             elif 'fwd' in key:
-                val.meta_fwd, val.meta_fbk, val.adapt = True, False, False
-            elif 'fbk' in key:
-                if self.evl:
-                    val.meta_fwd, val.meta_fbk, val.adapt = False, True, False
-                else:
-                    val.meta_fwd, val.meta_fbk, val.adapt = False, False, False
+                val.meta_fwd, val.adapt = True, False
 
             # -- meta-params
             if val.meta_fwd is True:
                 model.params_fwd.append(val)
-            elif val.meta_fbk is True:
-                model.params_fbk.append(val)
 
         return model
 
@@ -328,9 +313,8 @@ def parse_args():
     parser.add_argument('--K', type=int, default=50, help='The number of training datapoints per class.')
     parser.add_argument('--Q', type=int, default=5, help='The number of query datapoints per class.')
     parser.add_argument('--M', type=int, default=5, help='The number of classes per task.')
-    parser.add_argument('--lamb', type=float, default=1.5, help='.')
-    parser.add_argument('--lr_meta_fwd', type=float, default=5e-3, help='.')
-    parser.add_argument('--lr_meta_fbk', type=float, default=5e-3, help='.')
+    parser.add_argument('--lamb', type=float, default=2.1, help='.')
+    parser.add_argument('--lr_meta', type=float, default=1e-3, help='.')
     parser.add_argument('--a', type=float, default=5e-3, help='.')
     parser.add_argument('--b', type=float, default=0., help='.')
     parser.add_argument('--c', type=float, default=0., help='.')
