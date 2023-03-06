@@ -402,8 +402,8 @@ def main():
     metatrain_dataset = DataLoader(dataset=dataset, sampler=sampler, batch_size=args.M, drop_last=True)
 
     # -- meta-train
-    metaplasticity_model = MetaLearner(metatrain_dataset, args)
-    metaplasticity_model.train()
+    metalearning_model = MetaLearner(metatrain_dataset, args)
+    metalearning_model.train()
 
 
 if __name__ == '__main__':
