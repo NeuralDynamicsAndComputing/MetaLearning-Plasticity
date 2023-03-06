@@ -56,7 +56,7 @@ def plasticity_rule(activation, e, params, feedback, Theta, vec, fbk):
             params[k].adapt = B.adapt
 
 
-class my_optimizer:
+class MyOptimizer:
     """
         Adaptation optimizer object.
 

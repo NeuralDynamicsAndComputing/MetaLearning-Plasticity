@@ -17,7 +17,7 @@ from torch.nn.utils import _stateless
 from torch.utils.data import DataLoader, RandomSampler
 
 from utils import log, Plot, meta_stats
-from optim import my_optimizer, plasticity_rule
+from optim import MyOptimizer, plasticity_rule
 from dataset import EmnistDataset, DataProcess
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -114,7 +114,7 @@ class MetaLearner:
         # -- optimization params
         self.lamb = args.lamb
         self.loss_func = nn.CrossEntropyLoss()
-        self.OptimAdpt = my_optimizer(plasticity_rule, args.vec, args.fbk)
+        self.OptimAdpt = MyOptimizer(plasticity_rule, args.vec, args.fbk)
         self.OptimMeta = optim.Adam([{'params': self.model.params_fwd.parameters(), 'lr': args.lr_meta_fwd},
                                      {'params': self.model.params_fbk.parameters(), 'lr': args.lr_meta_fbk}])
 
