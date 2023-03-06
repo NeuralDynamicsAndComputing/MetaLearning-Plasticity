@@ -10,6 +10,21 @@ from torch.nn import functional as F
 
 class Plot:
     def __init__(self, res_dir, meta_param_size):  # todo: pass period as argument
+        """
+            Initialize an instance of the Plot class.
+
+        The function initializes the following instance variables:
+        - self.res_dir: a string representing the path to the results directory.
+        - self.period: an integer representing the size of the moving average
+            window for the plots.
+        - self.param_len: an integer representing the size of the meta-parameters
+            plus two (for loss and accuracy).
+
+        The function takes in two parameters:
+        :param res_dir: a string representing the path to the directory where
+            results will be saved.
+        :param meta_param_size: an integer representing the size of the meta-parameters.
+        """
         self.res_dir = res_dir
         self.period = 11
         self.param_len = meta_param_size + 2
@@ -38,7 +53,14 @@ class Plot:
 
     def meta_accuracy(self):
         """
-            meta accuracy
+            Plot the meta accuracy using a moving average.
+
+        The method first computes a moving average of the meta accuracy values
+        stored in a text file located in the results directory. It then plots
+        the moving average values against the meta-training episodes. Finally,
+        the plot is saved to a file in the results directory.
+
+        :return: None
         """
         # -- compute moving average
         z = self.comp_moving_avg(np.nan_to_num(np.loadtxt(self.res_dir + '/acc_meta.txt')), self.period)
@@ -48,13 +70,27 @@ class Plot:
 
         plt.title('Meta Accuracy')
         plt.ylim([0, 1])
-        # plt.xlim([0, self.N])
         plt.savefig(self.res_dir + '/meta_accuracy', bbox_inches='tight')
         plt.close()
 
     def meta_parameters(self):
         """
-            meta parameters
+            Plot meta-parameters.
+
+        This function reads in the meta-parameters from the `params.txt` file
+        in the result directory and plots them. The x-axis of the plot is the
+        meta-training episode number, and the y-axis represents the values of
+        each plasticity meta-parameter.
+
+        The function performs the following operations:
+        1. Read in the meta-parameters from the `params.txt` file.
+        2. Convert the read strings into a numpy array, reshaped to be of shape
+            `(num_episodes, param_len)`.
+        3. Extract the learning rate from the meta-parameters array and plot it.
+        4. Extract the other plasticity meta-parameters from the array, plot them
+            in separate colors, and add a legend to the plot.
+
+        :return: None
         """
         # fixme: read 'vec' and use for plotting and legend
         # -- read meta params
@@ -81,12 +117,18 @@ class Plot:
         plt.savefig(self.res_dir + '/meta_params', bbox_inches='tight')
         plt.close()
 
-        """
-
-
     def meta_angles(self):
         """
-            meta angles
+            Plot the meta-angles.
+
+        The method loads the meta angles from the text file located in the
+        results directory and computes the moving average using the window size
+        specified by `self.period`. The method then plots the computed moving
+        average values for each angle index against the meta-training episodes
+        using the `plt.plot()` function. A horizontal line is also plotted at
+        90 degrees as a baseline.
+
+        :return: None
         """
         # -- read angles
         y = np.nan_to_num(np.loadtxt(self.res_dir + '/e_ang_meta.txt'))
@@ -107,7 +149,13 @@ class Plot:
 
     def meta_loss(self):
         """
-            meta loss
+            Plot meta-loss.
+
+        This function computes a moving average of the meta-loss values saved
+        in the `loss_meta.txt` file, and plots the results. It saves the plot
+        in the result directory.
+
+        :return: None
         """
         # -- compute moving average
         z = self.comp_moving_avg(np.nan_to_num(np.loadtxt(self.res_dir + '/loss_meta.txt')), self.period)
@@ -121,6 +169,16 @@ class Plot:
         plt.close()
 
     def __call__(self, *args, **kwargs):
+        """
+            Call function to plot meta-data.
+
+        The function plots meta-data such as accuracy, parameters, angles and
+        loss by calling the corresponding functions.
+
+        :param args: any arguments.
+        :param kwargs: any keyword arguments.
+        :return: None
+        """
 
         self.meta_accuracy()
         self.meta_parameters()
@@ -129,7 +187,12 @@ class Plot:
 
 
 def log(data, filename):
+    """
+        Save data to a file.
 
+    :param data: data to be saved,
+    :param filename: path to the file.
+    """
     with open(filename, 'a') as f:
         np.savetxt(f, np.array(data), newline=' ', fmt='%0.6f')
         f.writelines('\n')
@@ -137,15 +200,23 @@ def log(data, filename):
 
 def normalize_vec(vector):
     """
-        normalize input vector.
+        Normalize input vector.
+
+    :param vector: input vector,
+    :return: normalized vector.
     """
     return vector / torch.linalg.norm(vector)
 
 
 def measure_angle(v1, v2):
     """
-        Compute angle between two vectors.
+        Compute the angle between two vectors.
+
+    :param v1: the first vector,
+    :param v2: the second vector,
+    :return: the angle in degrees between the two vectors.
     """
+    # -- normalize
     n1 = normalize_vec(v1.squeeze())
     n2 = normalize_vec(v2.squeeze())
 
@@ -153,16 +224,40 @@ def measure_angle(v1, v2):
 
 
 def accuracy(logits, label):
+    """
+        Compute accuracy.
 
+    The function computes the accuracy of the predicted logits compared to the
+    ground truth labels.
+
+    :param logits: predicted logits,
+    :param label: ground truth labels,
+    :return: accuracy of the predicted logits.
+    """
+    # -- obtain predicted class labels
     pred = F.softmax(logits, dim=1).argmax(dim=1)
 
     return torch.eq(pred, label).sum().item() / len(label)
 
 
 def meta_stats(logits, params, label, y, Beta, res_dir):
+    """
+        Compute meta statistics.
 
+    The function computes various meta statistics, including modulatory signal,
+    orthonormality errors, angle between modulator vectors, and accuracy. These
+    statistics are then logged to output files.
+
+    :param logits: logits tensor,
+    :param params: model parameters (weights),
+    :param label: ground truth label tensor,
+    :param y: activations tensor,
+    :param Beta: smoothness coefficient for the activation function,
+    :param res_dir: output directory path for the log files.
+    :return: computed accuracy value.
+    """
     with torch.no_grad():
-        # -- modulator vector stats
+        # -- modulatory signal
         B = dict({k: v for k, v in params.items() if 'fk' in k})
         e = [F.softmax(logits) - F.one_hot(label, num_classes=47)]
         for y_, i in zip(reversed(y), reversed(list(B))):
@@ -174,7 +269,6 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
         activation = [*y, F.softmax(logits, dim=1)]
         for i in range(len(activation)-1):
             E1.append((torch.norm(torch.matmul(activation[i], W[i].T)-torch.matmul(torch.matmul(activation[i+1], W[i]), W[i].T)) ** 2).item())
-
         log(E1, res_dir + '/E1_meta.txt')
 
         e_sym = [e[-1]]
@@ -182,16 +276,14 @@ def meta_stats(logits, params, label, y, Beta, res_dir):
         for y_, i in zip(reversed(y), reversed(list(W))):
             e_sym.insert(0, torch.matmul(e_sym[0], W[i]) * (1 - torch.exp(-Beta * y_)))
 
-        # -- angle b/w modulator vectors e_FA and e_BP
+        # -- angle between modulator vectors e_FA and e_BP
         e_angl = []
         for e_fix_, e_sym_ in zip(e, e_sym):
             e_angl.append(measure_angle(e_fix_.mean(dim=0), e_sym_.mean(dim=0)))
-
         log(e_angl, res_dir + '/e_ang_meta.txt')
 
         # -- accuracy
         acc = accuracy(logits, label)
-
         log([acc], res_dir + '/acc_meta.txt')
 
     return acc
