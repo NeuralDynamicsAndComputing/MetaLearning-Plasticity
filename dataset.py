@@ -13,6 +13,11 @@ import numpy as np
 
 
 class EmnistDataset(Dataset):
+    """
+        EMNIST Dataset function.
+
+    Constructs training and query sets for meta-training.
+    """
     def __init__(self, K, Q, dim):
         try:
             # -- create directory
@@ -54,7 +59,6 @@ class EmnistDataset(Dataset):
         self.K = K
         self.Q = Q
 
-        # --
         self.char_path = [folder for folder, folders, _ in os.walk(self.emnist_dir) if not folders]
         self.transform = transforms.Compose([transforms.Resize((dim, dim)), transforms.ToTensor()])
 
@@ -113,7 +117,28 @@ class EmnistDataset(Dataset):
 
 
 class DataProcess:
+    """
+        Meta-training data processor class.
+
+    The function is designed to process meta-training data, specifically
+    training and query data sets. The function performs several operations,
+    including:
+    1) Flattening images and merging image category and image index dimensions,
+    2) Transferring the processed data to the specified processing device,
+        which could either be 'cpu' or 'cuda',
+    3) Shuffling the order of data points in the training set to avoid any
+        potential biases during model training.
+    """
     def __init__(self, K, Q, dim, device='cpu', iid=True):
+        """
+            Initialize data processor.
+
+        :param K: training data set size (per class),
+        :param Q: query data set size (per class),
+        :param dim: image dimension,
+        :param device: processor device,
+        :param iid: shuffling flag.
+        """
         self.K = K
         self.Q = Q
         self.device = device
@@ -121,14 +146,24 @@ class DataProcess:
         self.dim = dim
 
     def __call__(self, data, M):
+        """
+            Processing meta-training data.
 
+        :param data: training and query data,
+        :param M: number of classes,
+        :return: processed data.
+        """
+
+        # -- load data
         x_trn, y_trn, x_qry, y_qry = data
 
+        # -- reshape
         x_trn = torch.reshape(x_trn, (M * self.K, self.dim ** 2)).to(self.device)
         y_trn = torch.reshape(y_trn, (M * self.K, 1)).to(self.device)
         x_qry = torch.reshape(x_qry, (M * self.Q, self.dim ** 2)).to(self.device)
         y_qry = torch.reshape(y_qry, (M * self.Q, 1)).to(self.device)
 
+        # -- shuffle
         if self.iid:
             perm = np.random.choice(range(M * self.K), M * self.K, False)
 
